@@ -13,7 +13,7 @@
 
     :root {
       --bg: #0a0a0a;
-      --surface: #1a1a1a;
+      --surface: rgba(20, 20, 20, 0.88);
       --accent: #f5c400;
       --accent-dark: #c49a00;
       --text: #ffffff;
@@ -24,73 +24,21 @@
       --border: #333333;
     }
 
-    body {
-      background: var(--bg);
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
       color: var(--text);
       font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0;
-      gap: 0;
+      overflow: hidden;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
-      overflow: hidden;
     }
 
-    /* 标题 - 更紧凑 */
-    header {
-      width: 100%;
-      text-align: center;
-      flex-shrink: 0;
-      padding: 6px 12px 4px;
-    }
-    header h1 {
-      font-size: clamp(1rem, 3.5vw, 1.4rem);
-      color: var(--accent);
-      letter-spacing: 0.04em;
-      line-height: 1.2;
-    }
-    header p {
-      color: var(--text-dim);
-      font-size: 0.7rem;
-      margin-top: 1px;
-    }
-
-    /* 状态条 - 更紧凑 */
-    #status-bar {
-      width: 100%;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 6px 12px;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 32px;
-      flex-shrink: 0;
-    }
-    #status-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--text-dim); flex-shrink: 0;
-      transition: background 0.4s;
-    }
-    #status-dot.loading  { background: var(--accent); animation: pulse 1s infinite; }
-    #status-dot.ready    { background: var(--success); }
-    #status-dot.speaking { background: var(--info); animation: pulse 0.6s infinite; }
-    #status-dot.error    { background: var(--danger); }
-    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-
-    /* ========== 视频容器：撑满全屏宽度，最大化高度 ========== */
+    /* ========== 全屏视频 ========== */
     #video-container {
-      position: relative;
-      width: 100vw;
-      flex: 1;
-      min-height: 0;
+      position: fixed;
+      inset: 0;
       background: #000;
-      overflow: hidden;
-      border: none;
     }
     #webcam {
       width: 100%; height: 100%;
@@ -104,51 +52,116 @@
       width: 100%; height: 100%;
       pointer-events: none;
     }
+
+    /* ========== 顶部状态栏（叠加在视频上） ========== */
+    #status-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 10;
+    }
+    #status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--text-dim); flex-shrink: 0;
+      transition: background 0.4s;
+    }
+    #status-dot.loading  { background: var(--accent); animation: pulse 1s infinite; }
+    #status-dot.ready    { background: var(--success); }
+    #status-dot.speaking { background: var(--info); animation: pulse 0.6s infinite; }
+    #status-dot.error    { background: var(--danger); }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    /* 右上角倒计时徽章 */
     #countdown-badge {
-      position: absolute;
-      top: 6px; right: 8px;
+      position: fixed;
+      top: 44px; right: 8px;
       background: rgba(0,0,0,0.75);
       color: var(--accent);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: bold;
-      padding: 2px 6px;
+      padding: 3px 8px;
       border-radius: 12px;
       border: 1px solid var(--accent);
+      z-index: 10;
       pointer-events: none;
     }
     #detecting-badge {
-      position: absolute;
-      top: 6px; left: 8px;
+      position: fixed;
+      top: 44px; left: 8px;
       background: rgba(0, 230, 118, 0.85);
       color: #000;
       font-size: 0.75rem;
       font-weight: bold;
-      padding: 2px 6px;
+      padding: 3px 8px;
       border-radius: 12px;
+      z-index: 10;
       display: none;
+      pointer-events: none;
     }
 
-    /* ========== 底部区域：结果面板 + 按钮 ========== */
-    #bottom-area {
-      width: 100%;
-      flex-shrink: 0;
+    /* ========== 底部浮动面板（叠加在视频上） ========== */
+    #bottom-panel {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(10, 10, 10, 0.82);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 8px 10px 12px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      padding: 4px 8px 6px;
-      background: var(--bg);
+      gap: 6px;
+      z-index: 10;
+      border-top: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* 识别结果面板 - 超紧凑 */
+    /* 语音解锁横幅 */
+    #voice-unlock-banner {
+      display: none;
+      width: 100%;
+      background: #ff4d4d;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      animation: pulse 1s infinite;
+    }
+
+    /* 开始按钮 */
+    #btn-start {
+      display: none;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: var(--success);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 2px 12px rgba(0,230,118,0.4);
+      touch-action: manipulation;
+    }
+    #btn-start:active { transform: scale(0.97); }
+
+    /* 识别结果面板 */
     #result-panel {
       width: 100%;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 4px 8px;
-      max-height: 70px;
+      max-height: 65px;
       overflow-y: auto;
-      flex-shrink: 0;
     }
     #result-panel h2 {
       font-size: 0.75rem;
@@ -189,29 +202,12 @@
     .item-dist  { min-width: 40px; color: var(--info); font-size: 0.7rem; }
     .item-conf  { min-width: 28px; color: var(--text-dim); font-size: 0.65rem; text-align: right; }
 
-    /* ========== 语音解锁横幅 ========== */
-    #voice-unlock-banner {
-      display: none;
-      width: 100%;
-      background: #ff4d4d;
-      color: #fff;
-      font-size: 0.9rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      animation: pulse 1s infinite;
-      flex-shrink: 0;
-    }
-
-    /* ========== 按钮区域 ========== */
+    /* 操作按钮行 */
     #btn-area {
       width: 100%;
       display: flex;
       flex-direction: row;
-      gap: 6px;
-      flex-shrink: 0;
+      gap: 8px;
     }
     .big-btn {
       flex: 1;
@@ -232,13 +228,6 @@
     }
     .big-btn:active { transform: scale(0.97); }
 
-    #btn-start {
-      width: 100%;
-      background: var(--success);
-      color: #000;
-      box-shadow: 0 2px 8px rgba(0,230,118,0.35);
-    }
-
     #btn-repeat {
       background: var(--accent);
       color: #000;
@@ -252,14 +241,6 @@
       border: 2px solid var(--accent);
     }
     #btn-detect:disabled { color: #555; border-color: #555; cursor: not-allowed; }
-
-    footer {
-      color: #444;
-      font-size: 0.6rem;
-      text-align: center;
-      padding-bottom: 2px;
-      flex-shrink: 0;
-    }
 
     #sr-announce {
       position: absolute;
@@ -299,29 +280,30 @@
     <p id="loading-text">正在加载 AI 模型，请稍候…</p>
   </div>
 
-  <header>
-    <h1>👁️ 视障环境感知助手</h1>
-    <p>TensorFlow.js COCO-SSD · 实时物体识别与语音播报</p>
-  </header>
+  <!-- 全屏视频 -->
+  <div id="video-container">
+    <video id="webcam" autoplay muted playsinline aria-label="摄像头实时画面"></video>
+    <canvas id="overlay-canvas" aria-hidden="true"></canvas>
+  </div>
 
+  <!-- 顶部状态栏（叠加在视频上） -->
   <div id="status-bar" role="status" aria-live="polite">
     <span id="status-dot" class="loading"></span>
     <span id="status-text">正在初始化…</span>
   </div>
 
-  <div id="video-container">
-    <video id="webcam" autoplay muted playsinline aria-label="摄像头实时画面"></video>
-    <canvas id="overlay-canvas" aria-hidden="true"></canvas>
-    <div id="countdown-badge" aria-hidden="true">⏱ 3s</div>
-    <div id="detecting-badge" aria-hidden="true">🔍 检测中…</div>
-  </div>
+  <!-- 右上角倒计时 -->
+  <div id="countdown-badge" aria-hidden="true">⏱ 3s</div>
+  <!-- 左上角检测中 -->
+  <div id="detecting-badge" aria-hidden="true">🔍 检测中…</div>
 
-  <div id="bottom-area">
+  <!-- 底部浮动面板（叠加在视频上） -->
+  <div id="bottom-panel">
     <div id="voice-unlock-banner" onclick="unlockVoice(this)">
       🔇 点击开启语音播报（必须开启才能听到声音）
     </div>
 
-    <button id="btn-start" class="big-btn" style="display:none;" onclick="startApp()">
+    <button id="btn-start" onclick="startApp()">
       ▶️ 点击开始检测
     </button>
 
@@ -341,8 +323,6 @@
       </button>
     </div>
   </div>
-
-  <footer>本工具仅供辅助参考，请注意周围环境安全</footer>
 
   <script>
     const LABEL_ZH = {
@@ -452,15 +432,13 @@
       utt.onstart = () => {
         voiceUnlocked = true;
         el.style.display = 'none';
-        /* 解锁后显示开始按钮 */
-        btnStart.style.display = 'flex';
+        btnStart.style.display = 'block';
         setStatus('语音已开启，请点击开始检测', 'ready');
       };
       utt.onerror = () => {
-        /* 即使出错也尝试继续 */
         voiceUnlocked = true;
         el.style.display = 'none';
-        btnStart.style.display = 'flex';
+        btnStart.style.display = 'block';
         setStatus('语音已开启，请点击开始检测', 'ready');
       };
       window.speechSynthesis.speak(utt);
@@ -523,7 +501,7 @@
         }).join('');
       }
 
-      /* 语音播报 - 只要解锁了就播报 */
+      /* 语音播报 */
       if (filtered.length > 0) {
         const top3 = filtered.slice(0, 3);
         const speechParts = top3.map(pred => {
@@ -616,7 +594,7 @@
       loadingOverlay.style.display = 'none';
       setStatus('请先开启语音播报', 'ready');
 
-      /* 显示语音解锁横幅 - 强制用户先点击 */
+      /* 显示语音解锁横幅 */
       unlockBanner.style.display = 'block';
 
     })();
