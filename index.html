@@ -136,23 +136,6 @@
       animation: pulse 1s infinite;
     }
 
-    /* 开始按钮 */
-    #btn-start {
-      display: none;
-      width: 100%;
-      padding: 14px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      background: var(--success);
-      color: #000;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      box-shadow: 0 2px 12px rgba(0,230,118,0.4);
-      touch-action: manipulation;
-    }
-    #btn-start:active { transform: scale(0.97); }
-
     /* 识别结果面板 */
     #result-panel {
       width: 100%;
@@ -300,12 +283,8 @@
   <!-- 底部浮动面板（叠加在视频上） -->
   <div id="bottom-panel">
     <div id="voice-unlock-banner" onclick="unlockVoice(this)">
-      🔇 点击开启语音播报（必须开启才能听到声音）
+      🔇 点击开启语音播报（不点也能检测，点了才有声音）
     </div>
-
-    <button id="btn-start" onclick="startApp()">
-      ▶️ 点击开始检测
-    </button>
 
     <div id="result-panel">
       <h2>📋 识别结果</h2>
@@ -388,7 +367,6 @@
     const resultList = document.getElementById('result-list');
     const btnRepeat = document.getElementById('btn-repeat');
     const btnDetect = document.getElementById('btn-detect');
-    const btnStart = document.getElementById('btn-start');
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
     const countdownBadge = document.getElementById('countdown-badge');
@@ -432,14 +410,12 @@
       utt.onstart = () => {
         voiceUnlocked = true;
         el.style.display = 'none';
-        btnStart.style.display = 'block';
-        setStatus('语音已开启，请点击开始检测', 'ready');
+        setStatus('语音已开启，正在检测中', 'ready');
       };
       utt.onerror = () => {
         voiceUnlocked = true;
         el.style.display = 'none';
-        btnStart.style.display = 'block';
-        setStatus('语音已开启，请点击开始检测', 'ready');
+        setStatus('语音已开启，正在检测中', 'ready');
       };
       window.speechSynthesis.speak(utt);
     };
@@ -536,11 +512,10 @@
       }, 1000);
     }
 
-    /* ========== 用户点击开始 ========== */
+    /* ========== 启动应用（自动） ========== */
     window.startApp = function() {
       if (appStarted) return;
       appStarted = true;
-      btnStart.style.display = 'none';
       btnRepeat.disabled = false;
       btnDetect.disabled = false;
       setStatus('正在检测中…', 'ready');
@@ -592,9 +567,15 @@
 
       /* 关闭加载遮罩 */
       loadingOverlay.style.display = 'none';
-      setStatus('请先开启语音播报', 'ready');
 
-      /* 显示语音解锁横幅 */
+      /* 自动开始检测（不需要点任何按钮） */
+      appStarted = true;
+      btnRepeat.disabled = false;
+      btnDetect.disabled = false;
+      setStatus('正在检测中…', 'ready');
+      startAutoDetect();
+
+      /* 显示语音解锁横幅（可选：点了才有语音播报，不点也能检测） */
       unlockBanner.style.display = 'block';
 
     })();
