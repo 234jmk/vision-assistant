@@ -7,6 +7,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+  <!-- ResponsiveVoice: 跨浏览器中文语音播报库，移动端兼容性远超原生 SpeechSynthesis -->
+  <script src="https://code.responsivevoice.org/responsivevoice.js?key=free"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -119,7 +121,7 @@
       width: 220px;
       height: 220px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #ff4d4d, #ff6b6b);
+      background: linear-gradient(135deg, #00c853, #69f0ae);
       color: #fff;
       font-size: 1.5rem;
       font-weight: 900;
@@ -130,7 +132,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 0 50px rgba(255,77,77,0.7);
+      box-shadow: 0 0 50px rgba(0,200,83,0.7);
       animation: pulseBig 1.5s ease-in-out infinite;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
@@ -138,11 +140,11 @@
     #voice-unlock-btn .icon { font-size: 3.5rem; }
     #voice-unlock-btn:active {
       transform: scale(0.93);
-      background: linear-gradient(135deg, #cc3333, #ff4d4d);
+      background: linear-gradient(135deg, #00a844, #00c853);
     }
     @keyframes pulseBig {
-      0%,100% { box-shadow: 0 0 50px rgba(255,77,77,0.7); transform: scale(1); }
-      50% { box-shadow: 0 0 80px rgba(255,77,77,0.95); transform: scale(1.05); }
+      0%,100% { box-shadow: 0 0 50px rgba(0,200,83,0.7); transform: scale(1); }
+      50% { box-shadow: 0 0 80px rgba(0,200,83,0.95); transform: scale(1.05); }
     }
     #voice-unlock-hint {
       color: #fff;
@@ -321,8 +323,8 @@
       <span>点击开启</span>
       <span>语音播报</span>
     </div>
-    <p id="voice-unlock-hint">检测已在运行中<br>点此按钮开启语音</p>
-    <p id="voice-unlock-hint-small">点击后会听到提示音，表示语音已开启</p>
+    <p id="voice-unlock-hint">检测已在运行中<br>点此按钮开启语音播报</p>
+    <p id="voice-unlock-hint-small">点击后会听到中文语音，表示播报已开启</p>
   </div>
 
   <!-- 全屏视频 -->
@@ -416,7 +418,6 @@
     let isDetecting = false;
     let voiceUnlocked = false;
     let appStarted = false;
-    let audioCtx = null;  // AudioContext 用于可靠的声音反馈
 
     /* DOM 元素 */
     const video = document.getElementById('webcam');
@@ -446,57 +447,46 @@
       requestAnimationFrame(() => { srAnnounce.textContent = text; });
     }
 
-    /* ========== AudioContext 声音引擎（手机上比 SpeechSynthesis 可靠） ========== */
-    function initAudioCtx() {
-      if (!audioCtx) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (AC) {
-          audioCtx = new AC();
-        }
-      }
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
+    /* ========== 语音播报（ResponsiveVoice 为主，原生 SpeechSynthesis 为备） ========== */
 
-    /* 用 AudioContext 播放一个短促的提示音 */
-    function playBeep(freq, duration, vol) {
-      if (!audioCtx) return;
-      try {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = freq || 880;
-        gain.gain.value = vol || 0.5;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (duration || 0.15));
-        osc.stop(audioCtx.currentTime + (duration || 0.15) + 0.01);
-      } catch(e) {
-        console.warn('playBeep error', e);
-      }
+    /* 判断 ResponsiveVoice 是否可用 */
+    function rvAvailable() {
+      return typeof responsiveVoice !== 'undefined' && typeof responsiveVoice.speak === 'function';
     }
-
-    /* 播放"开启成功"的旋律（两声短音） */
-    function playUnlockMelody() {
-      playBeep(660, 0.12, 0.6);
-      setTimeout(() => playBeep(880, 0.15, 0.6), 150);
-    }
-
-    /* 播放"检测到物体"的提示音（一声升调） */
-    function playDetectSound() {
-      playBeep(520, 0.08, 0.4);
-      setTimeout(() => playBeep(780, 0.1, 0.4), 100);
-    }
-
-    /* ========== 语音播报（双引擎：SpeechSynthesis + AudioContext 备用） ========== */
-    let speechSynthWorks = false;  // 标记 SpeechSynthesis 是否真正可用
 
     function speak(text) {
       announce(text);
 
-      /* 引擎1: 尝试 SpeechSynthesis（能播报中文语音） */
+      /* ★ 主引擎：ResponsiveVoice（专门为移动端浏览器优化，自带降级机制） */
+      if (rvAvailable()) {
+        try {
+          responsiveVoice.cancel();
+          responsiveVoice.speak(text, 'Chinese Female', {
+            rate: 1.0,
+            pitch: 1.0,
+            volume: 1.0,
+            onstart: function() {
+              setStatus('🔊 正在播报…', 'speaking');
+            },
+            onend: function() {
+              setStatus('播报完成', 'ready');
+            },
+            onerror: function(e) {
+              console.warn('RV TTS error, fallback to native', e);
+              nativeSpeak(text);
+            }
+          });
+          return;
+        } catch(e) {
+          console.warn('RV exception, fallback to native', e);
+        }
+      }
+
+      /* 备用引擎：浏览器原生 SpeechSynthesis */
+      nativeSpeak(text);
+    }
+
+    function nativeSpeak(text) {
       if ('speechSynthesis' in window) {
         try {
           window.speechSynthesis.cancel();
@@ -505,79 +495,51 @@
           utt.rate = 1.0;
           utt.pitch = 1.0;
           utt.volume = 1.0;
-
-          let resolved = false;
-          utt.onstart = () => {
-            resolved = true;
-            speechSynthWorks = true;
-            setStatus('🔊 正在播报…', 'speaking');
-          };
-          utt.onend = () => {
-            setStatus('播报完成', 'ready');
-          };
-          utt.onerror = (e) => {
-            console.warn('TTS error', e);
-            /* SpeechSynthesis 失败，用 AudioContext 提示音代替 */
-            if (!resolved) {
-              speechSynthWorks = false;
-              playDetectSound();
-            }
-          };
-
+          utt.onstart = () => { setStatus('🔊 正在播报…', 'speaking'); };
+          utt.onend = () => { setStatus('播报完成', 'ready'); };
+          utt.onerror = () => { setStatus('播报完成', 'ready'); };
           window.speechSynthesis.speak(utt);
-
-          /* 1.5秒后如果还没触发 onstart，说明 SpeechSynthesis 不工作，降级到提示音 */
-          setTimeout(() => {
-            if (!resolved && !speechSynthWorks) {
-              speechSynthWorks = false;
-              playDetectSound();
-            }
-          }, 1500);
-
           return;
         } catch(e) {
-          console.warn('SpeechSynthesis exception', e);
+          console.warn('Native TTS error', e);
         }
       }
-
-      /* 引擎2: SpeechSynthesis 不可用，用 AudioContext 提示音 */
-      playDetectSound();
+      console.warn('No TTS engine available');
     }
 
     /* ========== 解锁语音（大按钮） ========== */
     function doUnlockVoice() {
       if (voiceUnlocked) return;
 
-      /* ★ 关键改动：立即标记解锁 + 立即关闭遮罩，不依赖 SpeechSynthesis 的回调 */
+      /* 立即标记解锁 + 关闭遮罩 */
       voiceUnlocked = true;
       voiceUnlockOverlay.style.display = 'none';
       voiceBadge.textContent = '🔊 语音已开';
       voiceBadge.classList.add('on');
       setStatus('语音已开启，正在检测中', 'ready');
 
-      /* 初始化 AudioContext（必须在用户手势中调用） */
-      initAudioCtx();
-
-      /* 播放解锁提示音（AudioContext 比 SpeechSynthesis 可靠） */
-      playUnlockMelody();
-
-      /* 同时尝试 SpeechSynthesis 说一句话（如果能用就用） */
-      if ('speechSynthesis' in window) {
+      /* 用 ResponsiveVoice 说一句话来激活 */
+      if (rvAvailable()) {
         try {
-          window.speechSynthesis.cancel();
-          const utt = new SpeechSynthesisUtterance('语音已开启');
-          utt.lang = 'zh-CN';
-          utt.volume = 1.0;
-          utt.onstart = () => { speechSynthWorks = true; };
-          utt.onerror = () => { speechSynthWorks = false; };
-          window.speechSynthesis.speak(utt);
+          responsiveVoice.clickEvent();  // 告诉 RV 这是一个用户点击事件
+          responsiveVoice.speak('语音播报已开启，环境感知助手正在为您工作', 'Chinese Female', {
+            rate: 1.0,
+            volume: 1.0,
+            onstart: function() { console.log('RV voice activated'); },
+            onerror: function() {
+              /* RV 失败则试原生 */
+              nativeSpeak('语音已开启');
+            }
+          });
         } catch(e) {
-          speechSynthWorks = false;
+          nativeSpeak('语音已开启');
         }
+      } else {
+        nativeSpeak('语音已开启');
       }
     }
 
-    /* ★ 三种事件全部绑定：touchstart / touchend / click，确保手机一定触发 */
+    /* ★ 三种触摸事件绑定，确保手机一定触发 */
     let unlockTriggered = false;
 
     function handleUnlock(e) {
@@ -591,14 +553,12 @@
     voiceUnlockBtn.addEventListener('touchend', handleUnlock, { passive: false });
     voiceUnlockBtn.addEventListener('click', handleUnlock);
 
-    /* 右下角语音徽章点击也能重新开启 */
+    /* 右下角语音徽章点击也能重新触发 */
     voiceBadge.addEventListener('touchstart', function(e) {
       e.preventDefault();
-      initAudioCtx();
       if (!voiceUnlocked) doUnlockVoice();
     }, { passive: false });
     voiceBadge.addEventListener('click', function() {
-      initAudioCtx();
       if (!voiceUnlocked) doUnlockVoice();
     });
 
@@ -659,7 +619,7 @@
         }).join('');
       }
 
-      /* 语音播报 + 提示音（只有开启语音后才播报） */
+      /* 语音播报（只有开启语音后才播报） */
       if (filtered.length > 0) {
         const top3 = filtered.slice(0, 3);
         const speechParts = top3.map(pred => {
@@ -753,13 +713,11 @@
 
     /* ========== 按钮事件 ========== */
     btnRepeat.addEventListener('click', () => {
-      initAudioCtx();
       if (lastSpeech) speak(lastSpeech);
       else speak('暂无识别记录，请稍候检测。');
     });
 
     btnDetect.addEventListener('click', () => {
-      initAudioCtx();
       if (countdownInt) clearInterval(countdownInt);
       countdownVal = 3;
       startAutoDetect();
