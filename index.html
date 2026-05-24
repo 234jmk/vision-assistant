@@ -171,64 +171,6 @@
       display: none;
     }
 
-    /* =====================================================
-       识别结果展示列表
-       ===================================================== */
-    #result-panel {
-      width: 100%;
-      max-width: 800px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-    }
-
-    #result-panel h2 {
-      font-size: 1rem;
-      color: var(--accent);
-      margin-bottom: 10px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 6px;
-    }
-
-    #result-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 140px;
-      overflow-y: auto;
-    }
-
-    #result-list li {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1rem;
-      padding: 6px 10px;
-      border-radius: 8px;
-      background: rgba(255,255,255,0.05);
-    }
-
-    /* 置信度进度条 */
-    .conf-bar-wrap {
-      flex: 1;
-      height: 8px;
-      background: var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .conf-bar {
-      height: 100%;
-      border-radius: 4px;
-      background: linear-gradient(90deg, var(--success), var(--accent));
-      transition: width 0.3s;
-    }
-
-    .item-label { min-width: 60px; font-weight: 600; }
-    .item-dist  { min-width: 50px; color: var(--info); font-size: 0.85rem; }
-    .item-conf  { min-width: 38px; color: var(--text-dim); font-size: 0.8rem; text-align: right; }
 
     /* =====================================================
        底部按钮区
@@ -372,12 +314,11 @@
     <div id="detecting-badge" aria-hidden="true">🔍 检测中…</div>
   </div>
 
-  <!-- ===== 识别结果列表 ===== -->
-  <div id="result-panel">
-    <h2>📋 识别结果（置信度 &gt; 0.5）</h2>
-    <ul id="result-list" aria-label="识别到的物体列表">
-      <li style="color:#555; font-style:italic;">等待检测…</li>
-    </ul>
+<!-- ===== 语音解锁提示（移动端首次需要用户交互才能播放声音） ===== -->
+  <div id="voice-unlock-banner" style="display:none;width:100%;max-width:800px;background:#ff4d4d;color:#fff;
+    font-size:1.1rem;font-weight:700;text-align:center;padding:14px;border-radius:12px;cursor:pointer;
+    animation:pulse 1s infinite;" onclick="unlockVoice(this)">
+    🔇 点击此处开启语音播报
   </div>
 
   <!-- ===== 底部按钮区 ===== -->
@@ -461,14 +402,13 @@
       const ctx          = canvas.getContext('2d');
       const statusDot    = document.getElementById('status-dot');
       const statusText   = document.getElementById('status-text');
-      const resultList   = document.getElementById('result-list');
+      const srAnnounce   = document.getElementById('sr-announce');
       const btnRepeat    = document.getElementById('btn-repeat');
       const btnDetect    = document.getElementById('btn-detect');
       const loadingOverlay = document.getElementById('loading-overlay');
       const loadingText  = document.getElementById('loading-text');
       const countdownBadge = document.getElementById('countdown-badge');
       const detectingBadge = document.getElementById('detecting-badge');
-      const srAnnounce   = document.getElementById('sr-announce');
 
       /* 全局状态变量 */
       let model         = null;   // COCO-SSD 模型实例
@@ -546,6 +486,31 @@
       setStatus('模型就绪，即将开始检测…', 'ready');
       announce('视障环境感知助手已就绪，即将开始自动检测');
 
+      /* 移动端语音解锁：检测是否需要用户交互才能播放语音 */
+      let voiceUnlocked = false;
+      const unlockBanner = document.getElementById('voice-unlock-banner');
+
+      /* 尝试用一个无声 utterance 探测语音是否可用 */
+      function tryUnlockVoice() {
+        if (voiceUnlocked) return;
+        const probe = new SpeechSynthesisUtterance(' ');
+        probe.volume = 0;
+        probe.onstart = () => { voiceUnlocked = true; unlockBanner.style.display = 'none'; };
+        probe.onerror = () => { unlockBanner.style.display = 'block'; };
+        window.speechSynthesis.speak(probe);
+        /* 500ms 后若还未触发 onstart，说明被浏览器拦截了 */
+        setTimeout(() => { if (!voiceUnlocked) unlockBanner.style.display = 'block'; }, 500);
+      }
+
+      /* 全局函数：用户点击横幅后解锁语音 */
+      window.unlockVoice = function(el) {
+        const utt = new SpeechSynthesisUtterance('语音播报已开启');
+        utt.lang = 'zh-CN';
+        utt.volume = 1.0;
+        utt.onstart = () => { voiceUnlocked = true; el.style.display = 'none'; };
+        window.speechSynthesis.speak(utt);
+      };
+
       /* =====================================================
          Step 4：物体检测核心函数
          ===================================================== */
@@ -586,46 +551,27 @@
           /* 将原始坐标沿画布中线做水平镜像，与 CSS 翻转后的视频对齐 */
           const mx = canvas.width - x - w;
 
-          /* 绘制边界框 */
+          /* 绘制边界框（线条加粗，手机上更清晰） */
           ctx.strokeStyle = color;
-          ctx.lineWidth   = 3;
+          ctx.lineWidth   = Math.max(3, canvas.width / 160);
           ctx.strokeRect(mx, y, w, h);
 
-          /* 绘制标签背景 */
-          const labelText = `${zhLabel}  ${dist}  ${confPct}%`;
-          ctx.font = 'bold 15px "Microsoft YaHei", sans-serif';
+          /* 字体大小自适应画布尺寸，手机上更大更清晰 */
+          const fontSize  = Math.max(18, Math.round(canvas.width / 28));
+          const tagH      = fontSize + 10;
+          const labelText = `${zhLabel} ${dist} ${confPct}%`;
+          ctx.font = `bold ${fontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`;
           const textW = ctx.measureText(labelText).width;
-          const tagH  = 22;
           const tagY  = y > tagH + 4 ? y - tagH - 4 : y + h + 4;
 
+          /* 标签背景加黑色描边，提升任何背景下的可读性 */
           ctx.fillStyle = color;
-          ctx.fillRect(mx, tagY, textW + 12, tagH);
+          ctx.fillRect(mx, tagY, textW + 16, tagH);
 
           /* 绘制标签文字（正向，清晰可读） */
           ctx.fillStyle = '#000';
-          ctx.fillText(labelText, mx + 6, tagY + 15);
+          ctx.fillText(labelText, mx + 8, tagY + fontSize);
         });
-
-        /* 更新识别结果列表 UI */
-        if (filtered.length === 0) {
-          resultList.innerHTML = '<li style="color:#555;font-style:italic;">本次未检测到目标物体</li>';
-        } else {
-          resultList.innerHTML = filtered.map((pred, i) => {
-            const color   = getColor(i);
-            const zhLabel = toZh(pred.class);
-            const dist    = estimateDistance(pred.bbox, canvas.width, canvas.height);
-            const conf    = (pred.score * 100).toFixed(0);
-            return `
-              <li>
-                <span class="item-label" style="color:${color}">${zhLabel}</span>
-                <div class="conf-bar-wrap">
-                  <div class="conf-bar" style="width:${conf}%"></div>
-                </div>
-                <span class="item-dist">${dist}</span>
-                <span class="item-conf">${conf}%</span>
-              </li>`;
-          }).join('');
-        }
 
         /* 构建语音播报文本 */
         if (filtered.length > 0) {
@@ -705,6 +651,7 @@
       }
 
       /* 启动自动检测 */
+      tryUnlockVoice();
       startAutoDetect();
 
       /* =====================================================
