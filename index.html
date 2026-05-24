@@ -12,10 +12,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0a0a0a;
-      --surface: rgba(20, 20, 20, 0.88);
       --accent: #f5c400;
-      --accent-dark: #c49a00;
       --text: #ffffff;
       --text-dim: #cccccc;
       --danger: #ff4d4d;
@@ -53,7 +50,7 @@
       pointer-events: none;
     }
 
-    /* ========== 顶部状态栏（叠加在视频上） ========== */
+    /* ========== 顶部状态栏 ========== */
     #status-bar {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -78,7 +75,7 @@
     #status-dot.error    { background: var(--danger); }
     @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-    /* 右上角倒计时徽章 */
+    /* 倒计时徽章 */
     #countdown-badge {
       position: fixed;
       top: 44px; right: 8px;
@@ -106,50 +103,91 @@
       pointer-events: none;
     }
 
-    /* ========== 底部浮动面板（叠加在视频上） ========== */
+    /* ========== 语音解锁大按钮（屏幕正中央） ========== */
+    #voice-unlock-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.78);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    #voice-unlock-btn {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff4d4d, #ff6b6b);
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: 900;
+      border: 5px solid #fff;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 0 50px rgba(255,77,77,0.7);
+      animation: pulseBig 1.5s ease-in-out infinite;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #voice-unlock-btn .icon { font-size: 3.5rem; }
+    #voice-unlock-btn:active {
+      transform: scale(0.93);
+      background: linear-gradient(135deg, #cc3333, #ff4d4d);
+    }
+    @keyframes pulseBig {
+      0%,100% { box-shadow: 0 0 50px rgba(255,77,77,0.7); transform: scale(1); }
+      50% { box-shadow: 0 0 80px rgba(255,77,77,0.95); transform: scale(1.05); }
+    }
+    #voice-unlock-hint {
+      color: #fff;
+      font-size: 1.1rem;
+      text-align: center;
+      padding: 0 30px;
+      opacity: 0.9;
+      line-height: 1.6;
+    }
+    #voice-unlock-hint-small {
+      color: #aaa;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 0 30px;
+    }
+
+    /* ========== 底部浮动面板 ========== */
     #bottom-panel {
       position: fixed;
       bottom: 0; left: 0; right: 0;
       background: rgba(10, 10, 10, 0.82);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
-      padding: 8px 10px 12px;
+      padding: 6px 10px 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       z-index: 10;
       border-top: 1px solid rgba(255,255,255,0.1);
-    }
-
-    /* 语音解锁横幅 */
-    #voice-unlock-banner {
-      display: none;
-      width: 100%;
-      background: #ff4d4d;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 12px;
-      border-radius: 10px;
-      cursor: pointer;
-      animation: pulse 1s infinite;
     }
 
     /* 识别结果面板 */
     #result-panel {
       width: 100%;
-      background: var(--surface);
+      background: rgba(20, 20, 20, 0.88);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 4px 8px;
-      max-height: 65px;
+      max-height: 60px;
       overflow-y: auto;
     }
     #result-panel h2 {
       font-size: 0.75rem;
       color: var(--accent);
-      margin-bottom: 3px;
+      margin-bottom: 2px;
       border-bottom: 1px solid var(--border);
       padding-bottom: 2px;
     }
@@ -169,15 +207,10 @@
       background: rgba(255,255,255,0.04);
     }
     .conf-bar-wrap {
-      flex: 1;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
+      flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
     }
     .conf-bar {
-      height: 100%;
-      border-radius: 2px;
+      height: 100%; border-radius: 2px;
       background: linear-gradient(90deg, var(--success), var(--accent));
       transition: width 0.3s;
     }
@@ -200,8 +233,6 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      letter-spacing: 0.03em;
-      transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -214,9 +245,8 @@
     #btn-repeat {
       background: var(--accent);
       color: #000;
-      box-shadow: 0 2px 8px rgba(245,196,0,0.35);
     }
-    #btn-repeat:disabled { background: #555; color: #888; box-shadow: none; cursor: not-allowed; }
+    #btn-repeat:disabled { background: #555; color: #888; cursor: not-allowed; }
 
     #btn-detect {
       background: transparent;
@@ -224,6 +254,27 @@
       border: 2px solid var(--accent);
     }
     #btn-detect:disabled { color: #555; border-color: #555; cursor: not-allowed; }
+
+    /* 语音状态小徽章 */
+    #voice-badge {
+      position: fixed;
+      bottom: 140px; right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: var(--danger);
+      font-size: 0.8rem;
+      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 16px;
+      border: 2px solid var(--danger);
+      z-index: 11;
+      display: none;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #voice-badge.on {
+      color: var(--success);
+      border-color: var(--success);
+    }
 
     #sr-announce {
       position: absolute;
@@ -263,29 +314,37 @@
     <p id="loading-text">正在加载 AI 模型，请稍候…</p>
   </div>
 
+  <!-- 语音解锁大按钮（屏幕正中央，检测已在后台运行） -->
+  <div id="voice-unlock-overlay">
+    <div id="voice-unlock-btn" role="button" tabindex="0" aria-label="点击开启语音播报">
+      <span class="icon">🔊</span>
+      <span>点击开启</span>
+      <span>语音播报</span>
+    </div>
+    <p id="voice-unlock-hint">检测已在运行中<br>点此按钮开启语音</p>
+    <p id="voice-unlock-hint-small">点击后会听到提示音，表示语音已开启</p>
+  </div>
+
   <!-- 全屏视频 -->
   <div id="video-container">
     <video id="webcam" autoplay muted playsinline aria-label="摄像头实时画面"></video>
     <canvas id="overlay-canvas" aria-hidden="true"></canvas>
   </div>
 
-  <!-- 顶部状态栏（叠加在视频上） -->
+  <!-- 顶部状态栏 -->
   <div id="status-bar" role="status" aria-live="polite">
     <span id="status-dot" class="loading"></span>
     <span id="status-text">正在初始化…</span>
   </div>
 
-  <!-- 右上角倒计时 -->
   <div id="countdown-badge" aria-hidden="true">⏱ 3s</div>
-  <!-- 左上角检测中 -->
   <div id="detecting-badge" aria-hidden="true">🔍 检测中…</div>
 
-  <!-- 底部浮动面板（叠加在视频上） -->
-  <div id="bottom-panel">
-    <div id="voice-unlock-banner" onclick="unlockVoice(this)">
-      🔇 点击开启语音播报（不点也能检测，点了才有声音）
-    </div>
+  <!-- 右下角语音状态徽章 -->
+  <div id="voice-badge" role="button" aria-label="语音状态">🔇 静音</div>
 
+  <!-- 底部浮动面板 -->
+  <div id="bottom-panel">
     <div id="result-panel">
       <h2>📋 识别结果</h2>
       <ul id="result-list" aria-label="识别到的物体列表">
@@ -294,10 +353,10 @@
     </div>
 
     <div id="btn-area">
-      <button id="btn-repeat" class="big-btn" disabled aria-label="重复播报上次识别结果">
+      <button id="btn-repeat" class="big-btn" disabled aria-label="重复播报">
         🔊 重复播报
       </button>
-      <button id="btn-detect" class="big-btn" disabled aria-label="立即进行一次物体检测">
+      <button id="btn-detect" class="big-btn" disabled aria-label="立即检测">
         📷 立即检测
       </button>
     </div>
@@ -337,9 +396,9 @@
     function estimateDistance(bbox, videoW, videoH) {
       const [, , w, h] = bbox;
       const ratio = (w * h) / (videoW * videoH);
-      if (ratio > 0.25) return '约 1 米';
-      if (ratio > 0.08) return '约 2 米';
-      if (ratio > 0.02) return '约 5 米';
+      if (ratio > 0.25) return '约1米';
+      if (ratio > 0.08) return '约2米';
+      if (ratio > 0.02) return '约5米';
       return '较远处';
     }
 
@@ -357,6 +416,7 @@
     let isDetecting = false;
     let voiceUnlocked = false;
     let appStarted = false;
+    let audioCtx = null;  // AudioContext 用于可靠的声音反馈
 
     /* DOM 元素 */
     const video = document.getElementById('webcam');
@@ -371,8 +431,10 @@
     const loadingText = document.getElementById('loading-text');
     const countdownBadge = document.getElementById('countdown-badge');
     const detectingBadge = document.getElementById('detecting-badge');
-    const unlockBanner = document.getElementById('voice-unlock-banner');
     const srAnnounce = document.getElementById('sr-announce');
+    const voiceUnlockOverlay = document.getElementById('voice-unlock-overlay');
+    const voiceUnlockBtn = document.getElementById('voice-unlock-btn');
+    const voiceBadge = document.getElementById('voice-badge');
 
     function setStatus(msg, mode = 'ready') {
       statusText.textContent = msg;
@@ -384,41 +446,161 @@
       requestAnimationFrame(() => { srAnnounce.textContent = text; });
     }
 
-    /* ========== 语音播报 ========== */
-    function speak(text) {
-      if (!('speechSynthesis' in window)) {
-        console.warn('浏览器不支持语音');
-        return;
+    /* ========== AudioContext 声音引擎（手机上比 SpeechSynthesis 可靠） ========== */
+    function initAudioCtx() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) {
+          audioCtx = new AC();
+        }
       }
-      window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = 'zh-CN';
-      utt.rate = 1.0;
-      utt.pitch = 1.0;
-      utt.volume = 1.0;
-      utt.onstart = () => { setStatus('🔊 正在播报…', 'speaking'); announce(text); };
-      utt.onend = () => { setStatus('播报完成，等待下次检测…', 'ready'); };
-      utt.onerror = (e) => { console.warn('TTS 出错', e); setStatus('语音播报出错', 'error'); };
-      window.speechSynthesis.speak(utt);
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
     }
 
-    /* ========== 解锁语音 ========== */
-    window.unlockVoice = function(el) {
-      const utt = new SpeechSynthesisUtterance('语音播报已开启');
-      utt.lang = 'zh-CN';
-      utt.volume = 1.0;
-      utt.onstart = () => {
-        voiceUnlocked = true;
-        el.style.display = 'none';
-        setStatus('语音已开启，正在检测中', 'ready');
-      };
-      utt.onerror = () => {
-        voiceUnlocked = true;
-        el.style.display = 'none';
-        setStatus('语音已开启，正在检测中', 'ready');
-      };
-      window.speechSynthesis.speak(utt);
-    };
+    /* 用 AudioContext 播放一个短促的提示音 */
+    function playBeep(freq, duration, vol) {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq || 880;
+        gain.gain.value = vol || 0.5;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (duration || 0.15));
+        osc.stop(audioCtx.currentTime + (duration || 0.15) + 0.01);
+      } catch(e) {
+        console.warn('playBeep error', e);
+      }
+    }
+
+    /* 播放"开启成功"的旋律（两声短音） */
+    function playUnlockMelody() {
+      playBeep(660, 0.12, 0.6);
+      setTimeout(() => playBeep(880, 0.15, 0.6), 150);
+    }
+
+    /* 播放"检测到物体"的提示音（一声升调） */
+    function playDetectSound() {
+      playBeep(520, 0.08, 0.4);
+      setTimeout(() => playBeep(780, 0.1, 0.4), 100);
+    }
+
+    /* ========== 语音播报（双引擎：SpeechSynthesis + AudioContext 备用） ========== */
+    let speechSynthWorks = false;  // 标记 SpeechSynthesis 是否真正可用
+
+    function speak(text) {
+      announce(text);
+
+      /* 引擎1: 尝试 SpeechSynthesis（能播报中文语音） */
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utt = new SpeechSynthesisUtterance(text);
+          utt.lang = 'zh-CN';
+          utt.rate = 1.0;
+          utt.pitch = 1.0;
+          utt.volume = 1.0;
+
+          let resolved = false;
+          utt.onstart = () => {
+            resolved = true;
+            speechSynthWorks = true;
+            setStatus('🔊 正在播报…', 'speaking');
+          };
+          utt.onend = () => {
+            setStatus('播报完成', 'ready');
+          };
+          utt.onerror = (e) => {
+            console.warn('TTS error', e);
+            /* SpeechSynthesis 失败，用 AudioContext 提示音代替 */
+            if (!resolved) {
+              speechSynthWorks = false;
+              playDetectSound();
+            }
+          };
+
+          window.speechSynthesis.speak(utt);
+
+          /* 1.5秒后如果还没触发 onstart，说明 SpeechSynthesis 不工作，降级到提示音 */
+          setTimeout(() => {
+            if (!resolved && !speechSynthWorks) {
+              speechSynthWorks = false;
+              playDetectSound();
+            }
+          }, 1500);
+
+          return;
+        } catch(e) {
+          console.warn('SpeechSynthesis exception', e);
+        }
+      }
+
+      /* 引擎2: SpeechSynthesis 不可用，用 AudioContext 提示音 */
+      playDetectSound();
+    }
+
+    /* ========== 解锁语音（大按钮） ========== */
+    function doUnlockVoice() {
+      if (voiceUnlocked) return;
+
+      /* ★ 关键改动：立即标记解锁 + 立即关闭遮罩，不依赖 SpeechSynthesis 的回调 */
+      voiceUnlocked = true;
+      voiceUnlockOverlay.style.display = 'none';
+      voiceBadge.textContent = '🔊 语音已开';
+      voiceBadge.classList.add('on');
+      setStatus('语音已开启，正在检测中', 'ready');
+
+      /* 初始化 AudioContext（必须在用户手势中调用） */
+      initAudioCtx();
+
+      /* 播放解锁提示音（AudioContext 比 SpeechSynthesis 可靠） */
+      playUnlockMelody();
+
+      /* 同时尝试 SpeechSynthesis 说一句话（如果能用就用） */
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utt = new SpeechSynthesisUtterance('语音已开启');
+          utt.lang = 'zh-CN';
+          utt.volume = 1.0;
+          utt.onstart = () => { speechSynthWorks = true; };
+          utt.onerror = () => { speechSynthWorks = false; };
+          window.speechSynthesis.speak(utt);
+        } catch(e) {
+          speechSynthWorks = false;
+        }
+      }
+    }
+
+    /* ★ 三种事件全部绑定：touchstart / touchend / click，确保手机一定触发 */
+    let unlockTriggered = false;
+
+    function handleUnlock(e) {
+      if (unlockTriggered) return;
+      unlockTriggered = true;
+      if (e) e.preventDefault();
+      doUnlockVoice();
+    }
+
+    voiceUnlockBtn.addEventListener('touchstart', handleUnlock, { passive: false });
+    voiceUnlockBtn.addEventListener('touchend', handleUnlock, { passive: false });
+    voiceUnlockBtn.addEventListener('click', handleUnlock);
+
+    /* 右下角语音徽章点击也能重新开启 */
+    voiceBadge.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      initAudioCtx();
+      if (!voiceUnlocked) doUnlockVoice();
+    }, { passive: false });
+    voiceBadge.addEventListener('click', function() {
+      initAudioCtx();
+      if (!voiceUnlocked) doUnlockVoice();
+    });
 
     /* ========== 物体检测 ========== */
     async function runDetection() {
@@ -477,7 +659,7 @@
         }).join('');
       }
 
-      /* 语音播报 */
+      /* 语音播报 + 提示音（只有开启语音后才播报） */
       if (filtered.length > 0) {
         const top3 = filtered.slice(0, 3);
         const speechParts = top3.map(pred => {
@@ -486,7 +668,7 @@
           return `前方${dist}有${zhLabel}`;
         });
         lastSpeech = speechParts.join('，') + '，请注意。';
-        speak(lastSpeech);
+        if (voiceUnlocked) speak(lastSpeech);
       } else {
         lastSpeech = '前方暂无检测到障碍物。';
       }
@@ -512,16 +694,6 @@
       }, 1000);
     }
 
-    /* ========== 启动应用（自动） ========== */
-    window.startApp = function() {
-      if (appStarted) return;
-      appStarted = true;
-      btnRepeat.disabled = false;
-      btnDetect.disabled = false;
-      setStatus('正在检测中…', 'ready');
-      startAutoDetect();
-    };
-
     /* ========== Canvas 尺寸 ========== */
     function resizeCanvas() {
       canvas.width = video.videoWidth || 640;
@@ -532,7 +704,6 @@
     (async function main() {
       setStatus('正在加载 AI 模型…', 'loading');
 
-      /* 加载模型 */
       try {
         loadingText.textContent = '正在加载 COCO-SSD 模型（首次约需 10-30 秒）…';
         model = await cocoSsd.load({ base: 'mobilenet_v2' });
@@ -544,7 +715,6 @@
         return;
       }
 
-      /* 获取摄像头 */
       loadingText.textContent = '正在获取摄像头权限…';
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -568,25 +738,28 @@
       /* 关闭加载遮罩 */
       loadingOverlay.style.display = 'none';
 
-      /* 自动开始检测（不需要点任何按钮） */
+      /* 自动开始检测 */
       appStarted = true;
       btnRepeat.disabled = false;
       btnDetect.disabled = false;
       setStatus('正在检测中…', 'ready');
       startAutoDetect();
 
-      /* 显示语音解锁横幅（可选：点了才有语音播报，不点也能检测） */
-      unlockBanner.style.display = 'block';
+      /* 弹出语音解锁大按钮 */
+      voiceUnlockOverlay.style.display = 'flex';
+      voiceBadge.style.display = 'block';
 
     })();
 
     /* ========== 按钮事件 ========== */
     btnRepeat.addEventListener('click', () => {
+      initAudioCtx();
       if (lastSpeech) speak(lastSpeech);
       else speak('暂无识别记录，请稍候检测。');
     });
 
     btnDetect.addEventListener('click', () => {
+      initAudioCtx();
       if (countdownInt) clearInterval(countdownInt);
       countdownVal = 3;
       startAutoDetect();
