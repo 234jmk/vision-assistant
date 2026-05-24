@@ -32,46 +32,47 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 12px;
-      gap: 10px;
+      padding: 0;
+      gap: 0;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
     }
 
-    /* 标题 */
+    /* 标题 - 更紧凑 */
     header {
       width: 100%;
       text-align: center;
       flex-shrink: 0;
+      padding: 6px 12px 4px;
     }
     header h1 {
-      font-size: clamp(1.2rem, 4vw, 1.8rem);
+      font-size: clamp(1rem, 3.5vw, 1.4rem);
       color: var(--accent);
       letter-spacing: 0.04em;
-      line-height: 1.3;
+      line-height: 1.2;
     }
     header p {
       color: var(--text-dim);
-      font-size: 0.8rem;
-      margin-top: 2px;
+      font-size: 0.7rem;
+      margin-top: 1px;
     }
 
-    /* 状态条 */
+    /* 状态条 - 更紧凑 */
     #status-bar {
       width: 100%;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px 14px;
-      font-size: 0.95rem;
+      border-bottom: 1px solid var(--border);
+      padding: 6px 12px;
+      font-size: 0.85rem;
       display: flex;
       align-items: center;
-      gap: 10px;
-      min-height: 40px;
+      gap: 8px;
+      min-height: 32px;
       flex-shrink: 0;
     }
     #status-dot {
-      width: 12px; height: 12px; border-radius: 50%;
+      width: 10px; height: 10px; border-radius: 50%;
       background: var(--text-dim); flex-shrink: 0;
       transition: background 0.4s;
     }
@@ -81,18 +82,15 @@
     #status-dot.error    { background: var(--danger); }
     @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-    /* ========== 视频容器：撑满宽度，自适应高度 ========== */
+    /* ========== 视频容器：撑满全屏宽度，最大化高度 ========== */
     #video-container {
       position: relative;
-      width: 100%;
-      /* 去掉 max-width 限制，撑满屏幕 */
+      width: 100vw;
+      flex: 1;
+      min-height: 0;
       background: #000;
-      border-radius: 12px;
       overflow: hidden;
-      border: 2px solid var(--border);
-      /* 16:9 比例更适合手机横竖屏 */
-      aspect-ratio: 16 / 10;
-      flex-shrink: 0;
+      border: none;
     }
     #webcam {
       width: 100%; height: 100%;
@@ -108,77 +106,88 @@
     }
     #countdown-badge {
       position: absolute;
-      top: 8px; right: 10px;
+      top: 6px; right: 8px;
       background: rgba(0,0,0,0.75);
       color: var(--accent);
-      font-size: 1rem;
+      font-size: 0.9rem;
       font-weight: bold;
-      padding: 3px 8px;
-      border-radius: 16px;
+      padding: 2px 6px;
+      border-radius: 12px;
       border: 1px solid var(--accent);
       pointer-events: none;
     }
     #detecting-badge {
       position: absolute;
-      top: 8px; left: 10px;
+      top: 6px; left: 8px;
       background: rgba(0, 230, 118, 0.85);
       color: #000;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: bold;
-      padding: 3px 8px;
-      border-radius: 16px;
+      padding: 2px 6px;
+      border-radius: 12px;
       display: none;
     }
 
-    /* ========== 识别结果面板：缩小 ========== */
+    /* ========== 底部区域：结果面板 + 按钮 ========== */
+    #bottom-area {
+      width: 100%;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 4px 8px 6px;
+      background: var(--bg);
+    }
+
+    /* 识别结果面板 - 超紧凑 */
     #result-panel {
       width: 100%;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px 12px;
-      flex-shrink: 0;
-      max-height: 100px;
+      border-radius: 8px;
+      padding: 4px 8px;
+      max-height: 70px;
       overflow-y: auto;
+      flex-shrink: 0;
     }
     #result-panel h2 {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       color: var(--accent);
-      margin-bottom: 6px;
+      margin-bottom: 3px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 4px;
+      padding-bottom: 2px;
     }
     #result-list {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
     #result-list li {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 0.85rem;
-      padding: 3px 6px;
-      border-radius: 6px;
+      gap: 6px;
+      font-size: 0.75rem;
+      padding: 2px 4px;
+      border-radius: 4px;
       background: rgba(255,255,255,0.04);
     }
     .conf-bar-wrap {
       flex: 1;
-      height: 6px;
+      height: 4px;
       background: var(--border);
-      border-radius: 3px;
+      border-radius: 2px;
       overflow: hidden;
     }
     .conf-bar {
       height: 100%;
-      border-radius: 3px;
+      border-radius: 2px;
       background: linear-gradient(90deg, var(--success), var(--accent));
       transition: width 0.3s;
     }
-    .item-label { min-width: 50px; font-weight: 600; font-size: 0.85rem; }
-    .item-dist  { min-width: 45px; color: var(--info); font-size: 0.75rem; }
-    .item-conf  { min-width: 32px; color: var(--text-dim); font-size: 0.7rem; text-align: right; }
+    .item-label { min-width: 40px; font-weight: 600; font-size: 0.75rem; }
+    .item-dist  { min-width: 40px; color: var(--info); font-size: 0.7rem; }
+    .item-conf  { min-width: 28px; color: var(--text-dim); font-size: 0.65rem; text-align: right; }
 
     /* ========== 语音解锁横幅 ========== */
     #voice-unlock-banner {
@@ -186,46 +195,54 @@
       width: 100%;
       background: #ff4d4d;
       color: #fff;
-      font-size: 1rem;
+      font-size: 0.9rem;
       font-weight: 700;
       text-align: center;
-      padding: 12px;
-      border-radius: 10px;
+      padding: 8px;
+      border-radius: 8px;
       cursor: pointer;
       animation: pulse 1s infinite;
       flex-shrink: 0;
     }
 
-    /* ========== 底部按钮 ========== */
+    /* ========== 按钮区域 ========== */
     #btn-area {
       width: 100%;
       display: flex;
-      flex-direction: column;
-      gap: 8px;
+      flex-direction: row;
+      gap: 6px;
       flex-shrink: 0;
     }
     .big-btn {
-      width: 100%;
-      padding: 14px 10px;
-      font-size: 1.15rem;
+      flex: 1;
+      padding: 10px 6px;
+      font-size: 0.9rem;
       font-weight: 700;
       border: none;
-      border-radius: 12px;
+      border-radius: 8px;
       cursor: pointer;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.03em;
       transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 4px;
       touch-action: manipulation;
+      white-space: nowrap;
     }
     .big-btn:active { transform: scale(0.97); }
+
+    #btn-start {
+      width: 100%;
+      background: var(--success);
+      color: #000;
+      box-shadow: 0 2px 8px rgba(0,230,118,0.35);
+    }
 
     #btn-repeat {
       background: var(--accent);
       color: #000;
-      box-shadow: 0 4px 16px rgba(245,196,0,0.35);
+      box-shadow: 0 2px 8px rgba(245,196,0,0.35);
     }
     #btn-repeat:disabled { background: #555; color: #888; box-shadow: none; cursor: not-allowed; }
 
@@ -236,18 +253,11 @@
     }
     #btn-detect:disabled { color: #555; border-color: #555; cursor: not-allowed; }
 
-    /* 开始检测按钮（首次需要用户点击） */
-    #btn-start {
-      background: var(--success);
-      color: #000;
-      box-shadow: 0 4px 16px rgba(0,230,118,0.35);
-    }
-
     footer {
       color: #444;
-      font-size: 0.7rem;
+      font-size: 0.6rem;
       text-align: center;
-      padding-bottom: 4px;
+      padding-bottom: 2px;
       flex-shrink: 0;
     }
 
@@ -291,7 +301,7 @@
 
   <header>
     <h1>👁️ 视障环境感知助手</h1>
-    <p>基于 TensorFlow.js COCO-SSD · 实时物体识别与语音播报</p>
+    <p>TensorFlow.js COCO-SSD · 实时物体识别与语音播报</p>
   </header>
 
   <div id="status-bar" role="status" aria-live="polite">
@@ -306,27 +316,30 @@
     <div id="detecting-badge" aria-hidden="true">🔍 检测中…</div>
   </div>
 
-  <div id="result-panel">
-    <h2>📋 识别结果</h2>
-    <ul id="result-list" aria-label="识别到的物体列表">
-      <li style="color:#555; font-style:italic;">等待检测…</li>
-    </ul>
-  </div>
+  <div id="bottom-area">
+    <div id="voice-unlock-banner" onclick="unlockVoice(this)">
+      🔇 点击开启语音播报（必须开启才能听到声音）
+    </div>
 
-  <div id="voice-unlock-banner" onclick="unlockVoice(this)">
-    🔇 点击此处开启语音播报
-  </div>
-
-  <div id="btn-area">
     <button id="btn-start" class="big-btn" style="display:none;" onclick="startApp()">
       ▶️ 点击开始检测
     </button>
-    <button id="btn-repeat" class="big-btn" disabled aria-label="重复播报上次识别结果">
-      🔊 重复上次播报
-    </button>
-    <button id="btn-detect" class="big-btn" disabled aria-label="立即进行一次物体检测">
-      📷 立即检测
-    </button>
+
+    <div id="result-panel">
+      <h2>📋 识别结果</h2>
+      <ul id="result-list" aria-label="识别到的物体列表">
+        <li style="color:#555; font-style:italic;">等待检测…</li>
+      </ul>
+    </div>
+
+    <div id="btn-area">
+      <button id="btn-repeat" class="big-btn" disabled aria-label="重复播报上次识别结果">
+        🔊 重复播报
+      </button>
+      <button id="btn-detect" class="big-btn" disabled aria-label="立即进行一次物体检测">
+        📷 立即检测
+      </button>
+    </div>
   </div>
 
   <footer>本工具仅供辅助参考，请注意周围环境安全</footer>
@@ -439,8 +452,16 @@
       utt.onstart = () => {
         voiceUnlocked = true;
         el.style.display = 'none';
-        /* 解锁后如果还没开始检测，自动开始 */
-        if (!appStarted) startApp();
+        /* 解锁后显示开始按钮 */
+        btnStart.style.display = 'flex';
+        setStatus('语音已开启，请点击开始检测', 'ready');
+      };
+      utt.onerror = () => {
+        /* 即使出错也尝试继续 */
+        voiceUnlocked = true;
+        el.style.display = 'none';
+        btnStart.style.display = 'flex';
+        setStatus('语音已开启，请点击开始检测', 'ready');
       };
       window.speechSynthesis.speak(utt);
     };
@@ -473,20 +494,20 @@
         const mx = canvas.width - x - w;
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(3, canvas.width / 160);
+        ctx.lineWidth = Math.max(2, canvas.width / 200);
         ctx.strokeRect(mx, y, w, h);
 
-        const fontSize = Math.max(18, Math.round(canvas.width / 28));
-        const tagH = fontSize + 10;
+        const fontSize = Math.max(14, Math.round(canvas.width / 35));
+        const tagH = fontSize + 8;
         const labelText = `${zhLabel} ${dist} ${confPct}%`;
         ctx.font = `bold ${fontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`;
         const textW = ctx.measureText(labelText).width;
         const tagY = y > tagH + 4 ? y - tagH - 4 : y + h + 4;
 
         ctx.fillStyle = color;
-        ctx.fillRect(mx, tagY, textW + 16, tagH);
+        ctx.fillRect(mx, tagY, textW + 12, tagH);
         ctx.fillStyle = '#000';
-        ctx.fillText(labelText, mx + 8, tagY + fontSize);
+        ctx.fillText(labelText, mx + 6, tagY + fontSize - 1);
       });
 
       /* 更新结果列表 */
@@ -502,7 +523,7 @@
         }).join('');
       }
 
-      /* 语音播报 */
+      /* 语音播报 - 只要解锁了就播报 */
       if (filtered.length > 0) {
         const top3 = filtered.slice(0, 3);
         const speechParts = top3.map(pred => {
@@ -511,7 +532,7 @@
           return `前方${dist}有${zhLabel}`;
         });
         lastSpeech = speechParts.join('，') + '，请注意。';
-        if (voiceUnlocked) speak(lastSpeech);
+        speak(lastSpeech);
       } else {
         lastSpeech = '前方暂无检测到障碍物。';
       }
@@ -593,20 +614,10 @@
 
       /* 关闭加载遮罩 */
       loadingOverlay.style.display = 'none';
-      setStatus('模型就绪，请点击开始', 'ready');
+      setStatus('请先开启语音播报', 'ready');
 
-      /* 显示开始按钮 */
-      btnStart.style.display = 'flex';
-
-      /* 尝试探测语音 */
-      const probe = new SpeechSynthesisUtterance(' ');
-      probe.volume = 0;
-      probe.onstart = () => { voiceUnlocked = true; unlockBanner.style.display = 'none'; };
-      probe.onerror = () => { unlockBanner.style.display = 'block'; };
-      window.speechSynthesis.speak(probe);
-      setTimeout(() => {
-        if (!voiceUnlocked) unlockBanner.style.display = 'block';
-      }, 500);
+      /* 显示语音解锁横幅 - 强制用户先点击 */
+      unlockBanner.style.display = 'block';
 
     })();
 
@@ -618,9 +629,4 @@
 
     btnDetect.addEventListener('click', () => {
       if (countdownInt) clearInterval(countdownInt);
-      countdownVal = 3;
-      startAutoDetect();
-    });
-  </script>
-</body>
-</html>
+      countdown
