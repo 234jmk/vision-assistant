@@ -7,8 +7,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-  <!-- ResponsiveVoice: 跨浏览器中文语音播报库，移动端兼容性远超原生 SpeechSynthesis -->
-  <script src="https://code.responsivevoice.org/responsivevoice.js?key=free"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,7 +31,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* ========== 全屏视频 ========== */
+    /* ========== 全屏视频（不镜像，后置摄像头） ========== */
     #video-container {
       position: fixed;
       inset: 0;
@@ -43,7 +41,7 @@
       width: 100%; height: 100%;
       object-fit: cover;
       display: block;
-      transform: scaleX(-1);
+      /* 不做 scaleX(-1)，后置摄像头本来就是正向的 */
     }
     #overlay-canvas {
       position: absolute;
@@ -56,7 +54,7 @@
     #status-bar {
       position: fixed;
       top: 0; left: 0; right: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.72);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
       padding: 8px 12px;
@@ -109,21 +107,22 @@
     #voice-unlock-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.78);
+      background: rgba(0,0,0,0.82);
       z-index: 100;
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 20px;
+      padding: 20px;
     }
     #voice-unlock-btn {
       width: 220px;
       height: 220px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #00c853, #69f0ae);
+      background: linear-gradient(135deg, #ff6600, #ff9900);
       color: #fff;
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 900;
       border: 5px solid #fff;
       cursor: pointer;
@@ -131,47 +130,63 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      box-shadow: 0 0 50px rgba(0,200,83,0.7);
-      animation: pulseBig 1.5s ease-in-out infinite;
+      gap: 6px;
+      box-shadow: 0 0 60px rgba(255,102,0,0.8);
+      animation: pulseBig 1.4s ease-in-out infinite;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
     }
-    #voice-unlock-btn .icon { font-size: 3.5rem; }
-    #voice-unlock-btn:active {
-      transform: scale(0.93);
-      background: linear-gradient(135deg, #00a844, #00c853);
-    }
+    #voice-unlock-btn .icon { font-size: 4rem; line-height: 1; }
+    #voice-unlock-btn:active { opacity: 0.8; transform: scale(0.95) !important; }
     @keyframes pulseBig {
-      0%,100% { box-shadow: 0 0 50px rgba(0,200,83,0.7); transform: scale(1); }
-      50% { box-shadow: 0 0 80px rgba(0,200,83,0.95); transform: scale(1.05); }
+      0%,100% { box-shadow: 0 0 60px rgba(255,102,0,0.8); transform: scale(1); }
+      50% { box-shadow: 0 0 90px rgba(255,153,0,1); transform: scale(1.06); }
     }
     #voice-unlock-hint {
       color: #fff;
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       text-align: center;
-      padding: 0 30px;
-      opacity: 0.9;
-      line-height: 1.6;
+      line-height: 1.7;
     }
-    #voice-unlock-hint-small {
-      color: #aaa;
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 0 30px;
+    #voice-unlock-hint b { color: var(--accent); }
+
+    /* 语言选择行 */
+    #lang-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .lang-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 2px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 0.9rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      font-weight: 700;
     }
 
     /* ========== 底部浮动面板 ========== */
     #bottom-panel {
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      background: rgba(10, 10, 10, 0.82);
+      background: rgba(10, 10, 10, 0.85);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
-      padding: 6px 10px 10px;
+      padding: 6px 10px 12px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
       z-index: 10;
       border-top: 1px solid rgba(255,255,255,0.1);
     }
@@ -183,7 +198,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 4px 8px;
-      max-height: 60px;
+      max-height: 64px;
       overflow-y: auto;
     }
     #result-panel h2 {
@@ -208,16 +223,10 @@
       border-radius: 4px;
       background: rgba(255,255,255,0.04);
     }
-    .conf-bar-wrap {
-      flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
-    }
-    .conf-bar {
-      height: 100%; border-radius: 2px;
-      background: linear-gradient(90deg, var(--success), var(--accent));
-      transition: width 0.3s;
-    }
-    .item-label { min-width: 40px; font-weight: 600; font-size: 0.75rem; }
-    .item-dist  { min-width: 40px; color: var(--info); font-size: 0.7rem; }
+    .conf-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .conf-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--success), var(--accent)); transition: width 0.3s; }
+    .item-label { min-width: 44px; font-weight: 600; font-size: 0.75rem; }
+    .item-dist  { min-width: 44px; color: var(--info); font-size: 0.7rem; }
     .item-conf  { min-width: 28px; color: var(--text-dim); font-size: 0.65rem; text-align: right; }
 
     /* 操作按钮行 */
@@ -243,58 +252,36 @@
       white-space: nowrap;
     }
     .big-btn:active { transform: scale(0.97); }
-
-    #btn-repeat {
-      background: var(--accent);
-      color: #000;
-    }
+    #btn-repeat { background: var(--accent); color: #000; }
     #btn-repeat:disabled { background: #555; color: #888; cursor: not-allowed; }
-
-    #btn-detect {
-      background: transparent;
-      color: var(--accent);
-      border: 2px solid var(--accent);
-    }
+    #btn-detect { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
     #btn-detect:disabled { color: #555; border-color: #555; cursor: not-allowed; }
 
-    /* 语音状态小徽章 */
-    #voice-badge {
+    /* 当前语言小标签 */
+    #cur-lang-badge {
       position: fixed;
-      bottom: 140px; right: 10px;
+      top: 44px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.7);
-      color: var(--danger);
-      font-size: 0.8rem;
-      font-weight: bold;
-      padding: 6px 12px;
-      border-radius: 16px;
-      border: 2px solid var(--danger);
-      z-index: 11;
+      color: var(--info);
+      font-size: 0.75rem;
+      padding: 2px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--info);
+      z-index: 10;
+      pointer-events: none;
       display: none;
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-    #voice-badge.on {
-      color: var(--success);
-      border-color: var(--success);
     }
 
     #sr-announce {
-      position: absolute;
-      left: -9999px;
-      width: 1px; height: 1px;
-      overflow: hidden;
+      position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;
     }
 
     #loading-overlay {
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background: rgba(0,0,0,0.92);
       z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
     }
     #loading-overlay .spinner {
       width: 50px; height: 50px;
@@ -304,7 +291,7 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loading-overlay p { color: var(--text); font-size: 1rem; }
+    #loading-overlay p { color: var(--text); font-size: 1rem; text-align: center; padding: 0 20px; }
   </style>
 </head>
 
@@ -316,15 +303,20 @@
     <p id="loading-text">正在加载 AI 模型，请稍候…</p>
   </div>
 
-  <!-- 语音解锁大按钮（屏幕正中央，检测已在后台运行） -->
+  <!-- 语音解锁 + 语言选择大界面 -->
   <div id="voice-unlock-overlay">
     <div id="voice-unlock-btn" role="button" tabindex="0" aria-label="点击开启语音播报">
       <span class="icon">🔊</span>
       <span>点击开启</span>
       <span>语音播报</span>
     </div>
-    <p id="voice-unlock-hint">检测已在运行中<br>点此按钮开启语音播报</p>
-    <p id="voice-unlock-hint-small">点击后会听到中文语音，表示播报已开启</p>
+    <p id="voice-unlock-hint">检测已在运行中<br>点按钮开启<b>中文语音播报</b></p>
+    <div id="lang-row">
+      <button class="lang-btn active" data-lang="zh">🇨🇳 中文</button>
+      <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+      <button class="lang-btn" data-lang="ja">🇯🇵 日本語</button>
+      <button class="lang-btn" data-lang="ko">🇰🇷 한국어</button>
+    </div>
   </div>
 
   <!-- 全屏视频 -->
@@ -341,9 +333,7 @@
 
   <div id="countdown-badge" aria-hidden="true">⏱ 3s</div>
   <div id="detecting-badge" aria-hidden="true">🔍 检测中…</div>
-
-  <!-- 右下角语音状态徽章 -->
-  <div id="voice-badge" role="button" aria-label="语音状态">🔇 静音</div>
+  <div id="cur-lang-badge">🇨🇳 中文播报</div>
 
   <!-- 底部浮动面板 -->
   <div id="bottom-panel">
@@ -353,91 +343,154 @@
         <li style="color:#555; font-style:italic;">等待检测…</li>
       </ul>
     </div>
-
     <div id="btn-area">
-      <button id="btn-repeat" class="big-btn" disabled aria-label="重复播报">
-        🔊 重复播报
-      </button>
-      <button id="btn-detect" class="big-btn" disabled aria-label="立即检测">
-        📷 立即检测
-      </button>
+      <button id="btn-repeat" class="big-btn" disabled>🔊 重复播报</button>
+      <button id="btn-detect" class="big-btn" disabled>📷 立即检测</button>
     </div>
   </div>
 
   <script>
-    const LABEL_ZH = {
-      person: '行人', bicycle: '自行车', car: '汽车', motorcycle: '摩托车',
-      airplane: '飞机', bus: '公交车', train: '火车', truck: '卡车',
-      boat: '船', 'traffic light': '交通灯', 'fire hydrant': '消防栓',
-      'stop sign': '停车标志', 'parking meter': '停车计时器', bench: '长凳',
-      bird: '鸟', cat: '猫', dog: '狗', horse: '马', sheep: '羊', cow: '牛',
-      elephant: '大象', bear: '熊', zebra: '斑马', giraffe: '长颈鹿',
-      backpack: '背包', umbrella: '雨伞', handbag: '手提包', tie: '领带',
-      suitcase: '行李箱', frisbee: '飞盘', skis: '滑雪板', snowboard: '单板滑雪',
-      'sports ball': '运动球', kite: '风筝', 'baseball bat': '棒球棒',
-      'baseball glove': '棒球手套', skateboard: '滑板', surfboard: '冲浪板',
-      'tennis racket': '网球拍', bottle: '瓶子', 'wine glass': '酒杯',
-      cup: '杯子', fork: '叉子', knife: '刀', spoon: '勺子', bowl: '碗',
-      banana: '香蕉', apple: '苹果', sandwich: '三明治', orange: '橙子',
-      broccoli: '西兰花', carrot: '胡萝卜', 'hot dog': '热狗', pizza: '披萨',
-      donut: '甜甜圈', cake: '蛋糕', chair: '椅子', couch: '沙发',
-      'potted plant': '盆栽', bed: '床', 'dining table': '餐桌',
-      toilet: '马桶', tv: '电视', laptop: '笔记本电脑', mouse: '鼠标',
-      remote: '遥控器', keyboard: '键盘', 'cell phone': '手机',
-      microwave: '微波炉', oven: '烤箱', toaster: '烤面包机',
-      sink: '水槽', refrigerator: '冰箱', book: '书', clock: '时钟',
-      vase: '花瓶', scissors: '剪刀', 'teddy bear': '玩具熊',
-      'hair drier': '吹风机', toothbrush: '牙刷', staircase: '台阶',
-      door: '门', window: '窗户', wall: '墙壁', floor: '地面',
+    /* ========== 多语言标签映射 ========== */
+    const LABELS = {
+      zh: {
+        person:'行人', bicycle:'自行车', car:'汽车', motorcycle:'摩托车',
+        airplane:'飞机', bus:'公交车', train:'火车', truck:'卡车',
+        boat:'船', 'traffic light':'交通灯', 'fire hydrant':'消防栓',
+        'stop sign':'停车标志', bench:'长凳', bird:'鸟', cat:'猫',
+        dog:'狗', horse:'马', sheep:'羊', cow:'牛', elephant:'大象',
+        bear:'熊', zebra:'斑马', giraffe:'长颈鹿', backpack:'背包',
+        umbrella:'雨伞', handbag:'手提包', suitcase:'行李箱',
+        bottle:'瓶子', cup:'杯子', fork:'叉子', knife:'刀',
+        spoon:'勺子', bowl:'碗', banana:'香蕉', apple:'苹果',
+        sandwich:'三明治', orange:'橙子', broccoli:'西兰花',
+        carrot:'胡萝卜', 'hot dog':'热狗', pizza:'披萨',
+        donut:'甜甜圈', cake:'蛋糕', chair:'椅子', couch:'沙发',
+        'potted plant':'盆栽', bed:'床', 'dining table':'餐桌',
+        toilet:'马桶', tv:'电视', laptop:'笔记本', mouse:'鼠标',
+        remote:'遥控器', keyboard:'键盘', 'cell phone':'手机',
+        microwave:'微波炉', oven:'烤箱', sink:'水槽',
+        refrigerator:'冰箱', book:'书', clock:'时钟', vase:'花瓶',
+        scissors:'剪刀', 'teddy bear':'玩具熊', toothbrush:'牙刷',
+        door:'门', window:'窗户', stairs:'台阶',
+        dist_1m:'约1米', dist_2m:'约2米', dist_5m:'约5米', dist_far:'较远处',
+        prefix:'前方', suffix:'有', notice:'请注意。',
+        voice_lang:'zh-CN', voice_name_hint:'',
+        opening:'语音已开启，环境感知助手正在为您工作',
+        no_obj:'前方未检测到障碍物。',
+      },
+      en: {
+        person:'person', bicycle:'bicycle', car:'car', motorcycle:'motorcycle',
+        airplane:'airplane', bus:'bus', train:'train', truck:'truck',
+        boat:'boat', 'traffic light':'traffic light', 'fire hydrant':'fire hydrant',
+        'stop sign':'stop sign', bench:'bench', bird:'bird', cat:'cat',
+        dog:'dog', horse:'horse', sheep:'sheep', cow:'cow', elephant:'elephant',
+        bear:'bear', zebra:'zebra', giraffe:'giraffe', backpack:'backpack',
+        umbrella:'umbrella', handbag:'handbag', suitcase:'suitcase',
+        bottle:'bottle', cup:'cup', fork:'fork', knife:'knife',
+        spoon:'spoon', bowl:'bowl', banana:'banana', apple:'apple',
+        sandwich:'sandwich', orange:'orange', broccoli:'broccoli',
+        carrot:'carrot', 'hot dog':'hot dog', pizza:'pizza',
+        donut:'donut', cake:'cake', chair:'chair', couch:'couch',
+        'potted plant':'plant', bed:'bed', 'dining table':'table',
+        toilet:'toilet', tv:'TV', laptop:'laptop', mouse:'mouse',
+        remote:'remote', keyboard:'keyboard', 'cell phone':'phone',
+        microwave:'microwave', oven:'oven', sink:'sink',
+        refrigerator:'fridge', book:'book', clock:'clock', vase:'vase',
+        scissors:'scissors', 'teddy bear':'teddy bear', toothbrush:'toothbrush',
+        door:'door', window:'window', stairs:'stairs',
+        dist_1m:'1 meter', dist_2m:'2 meters', dist_5m:'5 meters', dist_far:'far away',
+        prefix:'', suffix:' ahead at ', notice:'Please be careful.',
+        voice_lang:'en-US', voice_name_hint:'',
+        opening:'Voice activated. Environment assistant is working for you.',
+        no_obj:'No obstacles detected ahead.',
+      },
+      ja: {
+        person:'人', bicycle:'自転車', car:'車', motorcycle:'バイク',
+        airplane:'飛行機', bus:'バス', train:'電車', truck:'トラック',
+        boat:'船', 'traffic light':'信号', bench:'ベンチ', bird:'鳥',
+        cat:'猫', dog:'犬', horse:'馬', cow:'牛', elephant:'象',
+        backpack:'リュック', umbrella:'傘', bottle:'ボトル', cup:'カップ',
+        chair:'椅子', couch:'ソファ', bed:'ベッド', tv:'テレビ',
+        laptop:'パソコン', 'cell phone':'スマホ', book:'本',
+        clock:'時計', door:'ドア', window:'窓',
+        dist_1m:'約1メートル', dist_2m:'約2メートル', dist_5m:'約5メートル', dist_far:'遠く',
+        prefix:'前方', suffix:'に', notice:'ご注意ください。',
+        voice_lang:'ja-JP', voice_name_hint:'',
+        opening:'音声が有効になりました。環境感知アシスタントが動作中です。',
+        no_obj:'前方に障害物は検出されていません。',
+      },
+      ko: {
+        person:'사람', bicycle:'자전거', car:'자동차', motorcycle:'오토바이',
+        airplane:'비행기', bus:'버스', train:'기차', truck:'트럭',
+        boat:'배', 'traffic light':'신호등', bench:'벤치', bird:'새',
+        cat:'고양이', dog:'개', horse:'말', cow:'소', elephant:'코끼리',
+        backpack:'배낭', umbrella:'우산', bottle:'병', cup:'컵',
+        chair:'의자', couch:'소파', bed:'침대', tv:'TV',
+        laptop:'노트북', 'cell phone':'휴대폰', book:'책',
+        clock:'시계', door:'문', window:'창문',
+        dist_1m:'약 1미터', dist_2m:'약 2미터', dist_5m:'약 5미터', dist_far:'멀리',
+        prefix:'전방 ', suffix:'에 ', notice:'주의하세요.',
+        voice_lang:'ko-KR', voice_name_hint:'',
+        opening:'음성이 활성화되었습니다. 환경 감지 도우미가 작동 중입니다.',
+        no_obj:'전방에 장애물이 감지되지 않았습니다.',
+      },
     };
 
-    function toZh(label) {
-      return LABEL_ZH[label.toLowerCase()] || label;
+    /* 当前语言 */
+    let currentLang = 'zh';
+
+    function L(key) {
+      return (LABELS[currentLang] && LABELS[currentLang][key]) ||
+             (LABELS['zh'][key]) || key;
+    }
+
+    function toLabel(cls) {
+      const key = cls.toLowerCase();
+      return (LABELS[currentLang] && LABELS[currentLang][key]) ||
+             (LABELS['zh'][key]) || cls;
     }
 
     function estimateDistance(bbox, videoW, videoH) {
       const [, , w, h] = bbox;
       const ratio = (w * h) / (videoW * videoH);
-      if (ratio > 0.25) return '约1米';
-      if (ratio > 0.08) return '约2米';
-      if (ratio > 0.02) return '约5米';
-      return '较远处';
+      if (ratio > 0.25) return L('dist_1m');
+      if (ratio > 0.08) return L('dist_2m');
+      if (ratio > 0.02) return L('dist_5m');
+      return L('dist_far');
     }
 
-    const COLOR_MAP = [
-      '#f5c400', '#00e676', '#40c4ff', '#ff6d00',
-      '#ea80fc', '#ff4d4d', '#1de9b6', '#ffab40',
-    ];
-    function getColor(index) { return COLOR_MAP[index % COLOR_MAP.length]; }
+    const COLOR_MAP = ['#f5c400','#00e676','#40c4ff','#ff6d00','#ea80fc','#ff4d4d','#1de9b6','#ffab40'];
+    function getColor(i) { return COLOR_MAP[i % COLOR_MAP.length]; }
 
-    /* ========== 全局变量 ========== */
+    /* ========== 全局状态 ========== */
     let model = null;
     let lastSpeech = '';
     let countdownVal = 3;
     let countdownInt = null;
     let isDetecting = false;
     let voiceUnlocked = false;
-    let appStarted = false;
+    let ttsVoice = null;  // 选中的本地语音
 
-    /* DOM 元素 */
-    const video = document.getElementById('webcam');
-    const canvas = document.getElementById('overlay-canvas');
-    const ctx = canvas.getContext('2d');
-    const statusDot = document.getElementById('status-dot');
-    const statusText = document.getElementById('status-text');
-    const resultList = document.getElementById('result-list');
-    const btnRepeat = document.getElementById('btn-repeat');
-    const btnDetect = document.getElementById('btn-detect');
+    /* DOM */
+    const video       = document.getElementById('webcam');
+    const canvas      = document.getElementById('overlay-canvas');
+    const ctx         = canvas.getContext('2d');
+    const statusDot   = document.getElementById('status-dot');
+    const statusText  = document.getElementById('status-text');
+    const resultList  = document.getElementById('result-list');
+    const btnRepeat   = document.getElementById('btn-repeat');
+    const btnDetect   = document.getElementById('btn-detect');
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
-    const countdownBadge = document.getElementById('countdown-badge');
-    const detectingBadge = document.getElementById('detecting-badge');
-    const srAnnounce = document.getElementById('sr-announce');
+    const countdownBadge  = document.getElementById('countdown-badge');
+    const detectingBadge  = document.getElementById('detecting-badge');
+    const srAnnounce      = document.getElementById('sr-announce');
     const voiceUnlockOverlay = document.getElementById('voice-unlock-overlay');
-    const voiceUnlockBtn = document.getElementById('voice-unlock-btn');
-    const voiceBadge = document.getElementById('voice-badge');
+    const voiceUnlockBtn     = document.getElementById('voice-unlock-btn');
+    const voiceUnlockHint    = document.getElementById('voice-unlock-hint');
+    const curLangBadge       = document.getElementById('cur-lang-badge');
 
-    function setStatus(msg, mode = 'ready') {
+    function setStatus(msg, mode='ready') {
       statusText.textContent = msg;
       statusDot.className = mode;
     }
@@ -447,120 +500,112 @@
       requestAnimationFrame(() => { srAnnounce.textContent = text; });
     }
 
-    /* ========== 语音播报（ResponsiveVoice 为主，原生 SpeechSynthesis 为备） ========== */
+    /* ========== 语言切换按钮 ========== */
+    const LANG_NAMES = { zh:'🇨🇳 中文播报', en:'🇬🇧 English', ja:'🇯🇵 日本語', ko:'🇰🇷 한국어' };
+    const LANG_HINTS = {
+      zh:'检测已在运行中<br>点按钮开启<b>中文语音播报</b>',
+      en:'Detection is running.<br>Tap to enable <b>English voice</b>',
+      ja:'検出中です。<br>ボタンをタップして<b>音声を有効</b>にしてください',
+      ko:'감지 중입니다.<br>버튼을 눌러 <b>음성 안내</b>를 활성화하세요',
+    };
 
-    /* 判断 ResponsiveVoice 是否可用 */
-    function rvAvailable() {
-      return typeof responsiveVoice !== 'undefined' && typeof responsiveVoice.speak === 'function';
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentLang = this.dataset.lang;
+        voiceUnlockHint.innerHTML = LANG_HINTS[currentLang] || LANG_HINTS['zh'];
+        pickVoice();  // 重新选语音
+      });
+    });
+
+    /* ========== 语音引擎：选本地语音（避免 Google 远程语音不可靠） ========== */
+    function pickVoice() {
+      if (!('speechSynthesis' in window)) return;
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) return;
+
+      const langCode = L('voice_lang');  // e.g. 'zh-CN'
+      const langBase = langCode.split('-')[0];  // e.g. 'zh'
+
+      /* 优先：完全匹配 lang + 本地语音 */
+      let v = voices.find(v => v.lang === langCode && v.localService);
+      /* 其次：lang 前缀匹配 + 本地语音 */
+      if (!v) v = voices.find(v => v.lang.startsWith(langBase) && v.localService);
+      /* 再次：完全匹配（不管是否本地） */
+      if (!v) v = voices.find(v => v.lang === langCode);
+      /* 最后：前缀匹配 */
+      if (!v) v = voices.find(v => v.lang.startsWith(langBase));
+
+      ttsVoice = v || null;
+      console.log('选中语音:', ttsVoice ? ttsVoice.name + ' (' + ttsVoice.lang + ')' : '无匹配，用默认');
     }
 
+    /* 语音列表加载完成后自动选 */
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = pickVoice;
+      pickVoice();
+    }
+
+    /* ========== 语音播报（原生 SpeechSynthesis + 正确语音选择） ========== */
     function speak(text) {
+      if (!('speechSynthesis' in window)) {
+        console.warn('浏览器不支持 SpeechSynthesis');
+        return;
+      }
       announce(text);
+      window.speechSynthesis.cancel();
 
-      /* ★ 主引擎：ResponsiveVoice（专门为移动端浏览器优化，自带降级机制） */
-      if (rvAvailable()) {
-        try {
-          responsiveVoice.cancel();
-          responsiveVoice.speak(text, 'Chinese Female', {
-            rate: 1.0,
-            pitch: 1.0,
-            volume: 1.0,
-            onstart: function() {
-              setStatus('🔊 正在播报…', 'speaking');
-            },
-            onend: function() {
-              setStatus('播报完成', 'ready');
-            },
-            onerror: function(e) {
-              console.warn('RV TTS error, fallback to native', e);
-              nativeSpeak(text);
-            }
-          });
-          return;
-        } catch(e) {
-          console.warn('RV exception, fallback to native', e);
-        }
-      }
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = L('voice_lang');
+      utt.rate = 1.0;
+      utt.pitch = 1.0;
+      utt.volume = 1.0;
 
-      /* 备用引擎：浏览器原生 SpeechSynthesis */
-      nativeSpeak(text);
+      if (ttsVoice) utt.voice = ttsVoice;
+
+      utt.onstart = () => setStatus('🔊 正在播报…', 'speaking');
+      utt.onend   = () => setStatus('播报完成', 'ready');
+      utt.onerror = (e) => {
+        console.warn('TTS error:', e.error);
+        setStatus('播报完成', 'ready');
+      };
+
+      window.speechSynthesis.speak(utt);
     }
 
-    function nativeSpeak(text) {
-      if ('speechSynthesis' in window) {
-        try {
-          window.speechSynthesis.cancel();
-          const utt = new SpeechSynthesisUtterance(text);
-          utt.lang = 'zh-CN';
-          utt.rate = 1.0;
-          utt.pitch = 1.0;
-          utt.volume = 1.0;
-          utt.onstart = () => { setStatus('🔊 正在播报…', 'speaking'); };
-          utt.onend = () => { setStatus('播报完成', 'ready'); };
-          utt.onerror = () => { setStatus('播报完成', 'ready'); };
-          window.speechSynthesis.speak(utt);
-          return;
-        } catch(e) {
-          console.warn('Native TTS error', e);
-        }
-      }
-      console.warn('No TTS engine available');
-    }
-
-    /* ========== 解锁语音（大按钮） ========== */
-    function doUnlockVoice() {
-      if (voiceUnlocked) return;
-
-      /* 立即标记解锁 + 关闭遮罩 */
-      voiceUnlocked = true;
-      voiceUnlockOverlay.style.display = 'none';
-      voiceBadge.textContent = '🔊 语音已开';
-      voiceBadge.classList.add('on');
-      setStatus('语音已开启，正在检测中', 'ready');
-
-      /* 用 ResponsiveVoice 说一句话来激活 */
-      if (rvAvailable()) {
-        try {
-          responsiveVoice.clickEvent();  // 告诉 RV 这是一个用户点击事件
-          responsiveVoice.speak('语音播报已开启，环境感知助手正在为您工作', 'Chinese Female', {
-            rate: 1.0,
-            volume: 1.0,
-            onstart: function() { console.log('RV voice activated'); },
-            onerror: function() {
-              /* RV 失败则试原生 */
-              nativeSpeak('语音已开启');
-            }
-          });
-        } catch(e) {
-          nativeSpeak('语音已开启');
-        }
-      } else {
-        nativeSpeak('语音已开启');
-      }
-    }
-
-    /* ★ 三种触摸事件绑定，确保手机一定触发 */
+    /* ========== 解锁语音（大按钮点击） ========== */
     let unlockTriggered = false;
 
-    function handleUnlock(e) {
+    function doUnlockVoice() {
       if (unlockTriggered) return;
       unlockTriggered = true;
+
+      /* 立刻关闭遮罩 */
+      voiceUnlockOverlay.style.display = 'none';
+
+      /* 显示当前语言标签 */
+      curLangBadge.textContent = LANG_NAMES[currentLang] || '语音已开';
+      curLangBadge.style.display = 'block';
+
+      setStatus('语音已开启，正在检测中', 'ready');
+      voiceUnlocked = true;
+
+      /* 说开启提示语 */
+      speak(L('opening'));
+    }
+
+    function handleUnlock(e) {
+      /* 如果点的是语言按钮，不触发解锁 */
+      if (e.target.classList.contains('lang-btn')) return;
       if (e) e.preventDefault();
       doUnlockVoice();
     }
 
     voiceUnlockBtn.addEventListener('touchstart', handleUnlock, { passive: false });
-    voiceUnlockBtn.addEventListener('touchend', handleUnlock, { passive: false });
-    voiceUnlockBtn.addEventListener('click', handleUnlock);
-
-    /* 右下角语音徽章点击也能重新触发 */
-    voiceBadge.addEventListener('touchstart', function(e) {
-      e.preventDefault();
-      if (!voiceUnlocked) doUnlockVoice();
-    }, { passive: false });
-    voiceBadge.addEventListener('click', function() {
-      if (!voiceUnlocked) doUnlockVoice();
-    });
+    voiceUnlockBtn.addEventListener('touchend',   handleUnlock, { passive: false });
+    voiceUnlockBtn.addEventListener('click',      handleUnlock);
 
     /* ========== 物体检测 ========== */
     async function runDetection() {
@@ -576,61 +621,75 @@
         console.warn('推理出错', err);
       }
 
-      const filtered = predictions.filter(p => p.score > 0.5);
+      /* 置信度阈值 0.4（比之前的 0.5 更宽松，检测到更多物体） */
+      const filtered = predictions.filter(p => p.score > 0.4);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
       resizeCanvas();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       filtered.forEach((pred, i) => {
         const [x, y, w, h] = pred.bbox;
         const color = getColor(i);
-        const zhLabel = toZh(pred.class);
-        const dist = estimateDistance(pred.bbox, canvas.width, canvas.height);
-        const confPct = (pred.score * 100).toFixed(0);
-        const mx = canvas.width - x - w;
+        const label = toLabel(pred.class);
+        const dist  = estimateDistance(pred.bbox, canvas.width, canvas.height);
+        const conf  = (pred.score * 100).toFixed(0);
 
+        /* 后置摄像头不镜像，坐标直接用 */
         ctx.strokeStyle = color;
         ctx.lineWidth = Math.max(2, canvas.width / 200);
-        ctx.strokeRect(mx, y, w, h);
+        ctx.strokeRect(x, y, w, h);
 
         const fontSize = Math.max(14, Math.round(canvas.width / 35));
         const tagH = fontSize + 8;
-        const labelText = `${zhLabel} ${dist} ${confPct}%`;
+        const labelText = `${label} ${dist} ${conf}%`;
         ctx.font = `bold ${fontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`;
         const textW = ctx.measureText(labelText).width;
         const tagY = y > tagH + 4 ? y - tagH - 4 : y + h + 4;
 
         ctx.fillStyle = color;
-        ctx.fillRect(mx, tagY, textW + 12, tagH);
+        ctx.fillRect(x, tagY, textW + 12, tagH);
         ctx.fillStyle = '#000';
-        ctx.fillText(labelText, mx + 6, tagY + fontSize - 1);
+        ctx.fillText(labelText, x + 6, tagY + fontSize - 1);
       });
 
-      /* 更新结果列表 */
+      /* 结果列表 */
       if (filtered.length === 0) {
         resultList.innerHTML = '<li style="color:#555;font-style:italic;">本次未检测到目标</li>';
       } else {
         resultList.innerHTML = filtered.map((pred, i) => {
           const color = getColor(i);
-          const zhLabel = toZh(pred.class);
-          const dist = estimateDistance(pred.bbox, canvas.width, canvas.height);
-          const conf = (pred.score * 100).toFixed(0);
-          return `<li><span class="item-label" style="color:${color}">${zhLabel}</span><div class="conf-bar-wrap"><div class="conf-bar" style="width:${conf}%"></div></div><span class="item-dist">${dist}</span><span class="item-conf">${conf}%</span></li>`;
+          const label = toLabel(pred.class);
+          const dist  = estimateDistance(pred.bbox, canvas.width, canvas.height);
+          const conf  = (pred.score * 100).toFixed(0);
+          return `<li>
+            <span class="item-label" style="color:${color}">${label}</span>
+            <div class="conf-bar-wrap"><div class="conf-bar" style="width:${conf}%"></div></div>
+            <span class="item-dist">${dist}</span>
+            <span class="item-conf">${conf}%</span>
+          </li>`;
         }).join('');
       }
 
-      /* 语音播报（只有开启语音后才播报） */
+      /* 语音播报 */
       if (filtered.length > 0) {
         const top3 = filtered.slice(0, 3);
-        const speechParts = top3.map(pred => {
-          const zhLabel = toZh(pred.class);
-          const dist = estimateDistance(pred.bbox, canvas.width, canvas.height);
-          return `前方${dist}有${zhLabel}`;
-        });
-        lastSpeech = speechParts.join('，') + '，请注意。';
+        let parts;
+        if (currentLang === 'zh') {
+          parts = top3.map(p => `前方${estimateDistance(p.bbox, canvas.width, canvas.height)}有${toLabel(p.class)}`);
+          lastSpeech = parts.join('，') + '，请注意。';
+        } else if (currentLang === 'en') {
+          parts = top3.map(p => `${toLabel(p.class)} at ${estimateDistance(p.bbox, canvas.width, canvas.height)} ahead`);
+          lastSpeech = parts.join(', ') + '. Please be careful.';
+        } else if (currentLang === 'ja') {
+          parts = top3.map(p => `前方${estimateDistance(p.bbox, canvas.width, canvas.height)}に${toLabel(p.class)}`);
+          lastSpeech = parts.join('、') + '。ご注意ください。';
+        } else if (currentLang === 'ko') {
+          parts = top3.map(p => `전방 ${estimateDistance(p.bbox, canvas.width, canvas.height)}에 ${toLabel(p.class)}`);
+          lastSpeech = parts.join(', ') + '. 주의하세요.';
+        }
         if (voiceUnlocked) speak(lastSpeech);
       } else {
-        lastSpeech = '前方暂无检测到障碍物。';
+        lastSpeech = L('no_obj');
       }
 
       detectingBadge.style.display = 'none';
@@ -638,7 +697,7 @@
       isDetecting = false;
     }
 
-    /* ========== 自动检测 ========== */
+    /* ========== 自动检测（每 3 秒） ========== */
     function startAutoDetect() {
       runDetection();
       countdownVal = 3;
@@ -646,17 +705,13 @@
       if (countdownInt) clearInterval(countdownInt);
       countdownInt = setInterval(() => {
         countdownVal--;
-        if (countdownVal <= 0) {
-          countdownVal = 3;
-          runDetection();
-        }
+        if (countdownVal <= 0) { countdownVal = 3; runDetection(); }
         countdownBadge.textContent = `⏱ ${countdownVal}s`;
       }, 1000);
     }
 
-    /* ========== Canvas 尺寸 ========== */
     function resizeCanvas() {
-      canvas.width = video.videoWidth || 640;
+      canvas.width  = video.videoWidth  || 640;
       canvas.height = video.videoHeight || 480;
     }
 
@@ -667,9 +722,7 @@
       try {
         loadingText.textContent = '正在加载 COCO-SSD 模型（首次约需 10-30 秒）…';
         model = await cocoSsd.load({ base: 'mobilenet_v2' });
-        console.log('模型加载完成');
       } catch (err) {
-        console.error('模型加载失败', err);
         loadingText.textContent = '❌ 模型加载失败，请刷新重试。';
         setStatus('AI 模型加载失败', 'error');
         return;
@@ -678,15 +731,14 @@
       loadingText.textContent = '正在获取摄像头权限…';
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
+          /* environment = 后置摄像头，不需要镜像 */
           video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
         video.srcObject = stream;
         await new Promise(resolve => { video.onloadedmetadata = resolve; });
         await video.play();
-        console.log('摄像头启动成功');
       } catch (err) {
-        console.error('摄像头权限被拒绝', err);
         loadingText.textContent = '❌ 无法访问摄像头，请检查权限后刷新。';
         setStatus('摄像头权限被拒绝', 'error');
         return;
@@ -695,26 +747,20 @@
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
 
-      /* 关闭加载遮罩 */
       loadingOverlay.style.display = 'none';
 
-      /* 自动开始检测 */
-      appStarted = true;
       btnRepeat.disabled = false;
       btnDetect.disabled = false;
       setStatus('正在检测中…', 'ready');
       startAutoDetect();
 
-      /* 弹出语音解锁大按钮 */
       voiceUnlockOverlay.style.display = 'flex';
-      voiceBadge.style.display = 'block';
-
     })();
 
     /* ========== 按钮事件 ========== */
     btnRepeat.addEventListener('click', () => {
       if (lastSpeech) speak(lastSpeech);
-      else speak('暂无识别记录，请稍候检测。');
+      else speak(L('no_obj'));
     });
 
     btnDetect.addEventListener('click', () => {
