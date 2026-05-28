@@ -769,5 +769,46 @@
       startAutoDetect();
     });
   </script>
+<script>
+function unlockAudio() {
+  // 1. 解锁 Web Audio API（播报文字转语音用）
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (AudioContext) {
+    const ctx = new AudioContext();
+    // 如果状态是 suspended，强制恢复
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  }
+
+  // 2. 解锁 HTML5 Audio（播放音频文件用）
+  const silentAudio = document.createElement('audio');
+  silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+  silentAudio.muted = true;
+  silentAudio.play().then(() => {
+    silentAudio.pause();
+    silentAudio.currentTime = 0;
+  }).catch(() => {});
+
+  // 3. 如果用了 speechSynthesis，也预热一下
+  if (window.speechSynthesis) {
+    const utterance = new SpeechSynthesisUtterance('');
+    utterance.volume = 0;
+    speechSynthesis.speak(utterance);
+  }
+
+  document.removeEventListener('touchstart', unlockAudio);
+  document.removeEventListener('click', unlockAudio);
+  console.log('音频已解锁');
+}
+
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { once: true });
+</script>
 </body>
 </html>
