@@ -1,654 +1,1147 @@
-<!DOCTYPE html><html lang="zh-CN"><head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能路况检测系统</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; color: #fff; margin-bottom: 30px; }
-        header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-        header p { color: #aaa; }
-        
-        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .panel { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 25px; color: #fff; }
-        .panel h2 { margin-bottom: 20px; font-size: 1.3em; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
-        
-        .detection-wrapper { position: relative; }
-        .detection-area { height: 300px; background: #0a0a0f; border-radius: 10px; position: relative; overflow: hidden; margin-bottom: 20px; }
-        .detection-area canvas { width: 100%; height: 100%; }
-        
-        .character-mini { position: absolute; bottom: 10px; right: 10px; width: 60px; height: 80px; z-index: 10; cursor: pointer; }
-        .character-mini .head { width: 30px; height: 30px; background: linear-gradient(135deg, #ffdab9, #f5deb3); border-radius: 50%; position: absolute; top: 0; left: 50%; transform: translateX(-50%); box-shadow: inset -3px -3px 6px rgba(0,0,0,0.1); }
-        .character-mini .eye { width: 5px; height: 5px; background: #333; border-radius: 50%; position: absolute; top: 35%; }
-        .character-mini .eye.left { left: 25%; }
-        .character-mini .eye.right { right: 25%; }
-        .character-mini .mouth { width: 10px; height: 5px; background: #e87d7d; border-radius: 0 0 8px 8px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%); }
-        .character-mini .body-mini { width: 25px; height: 30px; background: linear-gradient(135deg, #4ade80, #22c55e); border-radius: 8px 8px 5px 5px; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); }
-        .character-mini .arm-mini { width: 8px; height: 18px; background: linear-gradient(135deg, #ffdab9, #f5deb3); border-radius: 4px; position: absolute; bottom: 45%; }
-        .character-mini .arm-mini.left { left: 3px; transform-origin: bottom right; }
-        .character-mini .arm-mini.right { right: 3px; transform-origin: bottom left; }
-        .character-mini .leg-mini { width: 8px; height: 15px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 4px; position: absolute; bottom: -15px; }
-        .character-mini .leg-mini.left { left: 8px; }
-        .character-mini .leg-mini.right { right: 8px; }
-        .character-mini .antenna-mini { width: 2px; height: 10px; background: #fbbf24; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); }
-        .character-mini .antenna-light-mini { width: 6px; height: 6px; background: #fbbf24; border-radius: 50%; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 8px #fbbf24, 0 0 15px #fbbf24; animation: blink 2s infinite; }
-        
-        .character-mini.speaking .mouth { animation: talk 0.3s infinite; }
-        .character-mini.waving .arm-mini.left { animation: wave-left 0.5s ease-in-out infinite; }
-        
-        .speech-bubble-mini { background: rgba(255,255,255,0.95); color: #333; padding: 8px 12px; border-radius: 15px; position: absolute; top: -50px; right: 0; white-space: nowrap; font-size: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); max-width: 180px; }
-        .speech-bubble-mini::after { content: ''; position: absolute; bottom: -6px; right: 20px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid rgba(255,255,255,0.95); }
-        .speech-bubble-mini.hidden { display: none; }
-        
-        @keyframes talk {
-            0%, 100% { height: 5px; border-radius: 0 0 8px 8px; }
-            50% { height: 10px; border-radius: 50%; }
-        }
-        
-        @keyframes wave-left {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(-30deg); }
-        }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 1; box-shadow: 0 0 8px #fbbf24, 0 0 15px #fbbf24; }
-            50% { opacity: 0.5; box-shadow: 0 0 4px #fbbf24; }
-        }
-        
-        .detection-status { display: flex; justify-content: space-between; margin-bottom: 15px; }
-        .status-item { text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
-        .status-item .label { font-size: 0.8em; color: #888; }
-        .status-item .value { font-size: 1.5em; font-weight: bold; }
-        .value.safe { color: #4ade80; }
-        .value.warning { color: #fbbf24; }
-        .value.danger { color: #f87171; }
-        
-        .controls { display: flex; gap: 10px; }
-        .btn { flex: 1; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: bold; transition: all 0.3s; }
-        .btn.start { background: linear-gradient(135deg, #4ade80, #22c55e); color: #000; }
-        .btn.stop { background: linear-gradient(135deg, #f87171, #ef4444); color: #fff; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        
-        .chat-area { display: flex; flex-direction: column; height: 450px; }
-        .chat-messages { flex: 1; overflow-y: auto; background: #0a0a0f; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
-        .chat-message { margin-bottom: 15px; max-width: 80%; }
-        .chat-message.user { text-align: right; }
-        .chat-message.bot { text-align: left; display: flex; align-items: flex-start; gap: 10px; }
-        .chat-message .content { display: inline-block; padding: 10px 15px; border-radius: 20px; }
-        .chat-message.user .content { background: #3b82f6; color: #fff; }
-        .chat-message.bot .content { background: rgba(255,255,255,0.1); color: #fff; }
-        
-        .chat-input { display: flex; gap: 10px; }
-        .chat-input input { flex: 1; padding: 12px 15px; border: none; border-radius: 25px; background: rgba(255,255,255,0.1); color: #fff; font-size: 1em; }
-        .chat-input input:focus { outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); }
-        
-        .language-selector { margin-bottom: 15px; display: flex; gap: 10px; }
-        .lang-btn { padding: 8px 16px; border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; background: transparent; color: #fff; cursor: pointer; transition: all 0.3s; }
-        .lang-btn.active { background: #3b82f6; border-color: #3b82f6; }
-        
-        .obstacle-list { list-style: none; max-height: 200px; overflow-y: auto; }
-        .obstacle-item { padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .obstacle-item .name { font-weight: bold; }
-        .obstacle-item .distance { font-size: 0.9em; color: #888; }
-        
-        @media (max-width: 768px) {
-            .main-content { grid-template-columns: 1fr; }
-        }
-    </style>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>视障助手 - 智能环境感知</title>
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #f5c400;
+      --green: #00e676;
+      --blue: #40c4ff;
+      --red: #ff4d4d;
+      --orange: #ff9900;
+      --border: #333;
+      --text: #fff;
+      --dim: #aaa;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      color: var(--text);
+      font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ===== 全屏视频 ===== */
+    #video-container {
+      position: fixed; inset: 0; background: #000;
+    }
+    #webcam {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    #overlay-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+
+    /* ===== 小人儿 "小路" - 可爱一体化设计（头身合一） ===== */
+    #character {
+      position: absolute; bottom: 80px; right: 12px;
+      width: 82px; height: 112px;
+      z-index: 15; cursor: pointer;
+      transition: transform 0.3s;
+      animation: charFloat 3s ease-in-out infinite;
+    }
+    #character:hover { transform: scale(1.12); }
+    #character.danger { animation: shake 0.3s infinite; }
+    @keyframes charFloat {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    /* 天线灯 + 天线杆 */
+    .char-antenna-light {
+      width: 11px; height: 11px;
+      background: radial-gradient(circle at 40% 40%, #fff7a0, var(--accent));
+      border-radius: 50%;
+      position: absolute; top: 0; left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 0 10px var(--accent), 0 0 22px var(--accent);
+      animation: blink 2s infinite;
+      z-index: 2;
+    }
+    .char-antenna {
+      width: 3px; height: 16px;
+      background: linear-gradient(to top, #4ade80, var(--accent));
+      position: absolute; top: 9px; left: 50%;
+      transform: translateX(-50%);
+      border-radius: 2px;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; box-shadow: 0 0 10px var(--accent), 0 0 22px var(--accent); }
+      50% { opacity: 0.5; box-shadow: 0 0 5px var(--accent); }
+    }
+
+    /* ★ 一体化身体 - 头身合一的蛋形/豆子形状 */
+    .char-body-main {
+      width: 60px; height: 78px;
+      background: linear-gradient(175deg, #bbf7d0 0%, #86efac 22%, #4ade80 52%, #22c55e 100%);
+      border-radius: 50% 50% 44% 44%;
+      position: absolute; top: 22px; left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 4px 16px rgba(74,222,128,0.35), inset -5px -5px 12px rgba(0,0,0,0.07), inset 5px 5px 12px rgba(255,255,255,0.15);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    #character.danger .char-body-main {
+      background: linear-gradient(175deg, #fecaca 0%, #fca5a5 22%, #f87171 52%, #ef4444 100%);
+      box-shadow: 0 4px 18px rgba(239,68,68,0.5), inset -5px -5px 12px rgba(0,0,0,0.07);
+    }
+
+    /* 大眼睛 - 动漫风闪亮 */
+    .char-eye {
+      width: 15px; height: 17px;
+      background: radial-gradient(circle at 45% 40%, #2d2d4e, #1a1a2e);
+      border-radius: 50%;
+      position: absolute; top: 16px;
+      box-shadow: inset 0 0 3px rgba(0,0,0,0.3);
+    }
+    .char-eye.left { left: 9px; }
+    .char-eye.right { right: 9px; }
+
+    /* 眼睛高光 - 大+小两个白点 */
+    .char-eye-sparkle {
+      width: 5px; height: 5px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute; top: 3px; left: 3px;
+    }
+    .char-eye-sparkle.small {
+      width: 3px; height: 3px;
+      top: 10px; left: 8px;
+    }
+
+    /* 腮红 */
+    .char-cheek {
+      width: 11px; height: 7px;
+      background: rgba(255,130,130,0.5);
+      border-radius: 50%;
+      position: absolute; top: 33px;
+    }
+    .char-cheek.left { left: 3px; }
+    .char-cheek.right { right: 3px; }
+
+    /* 嘴巴 - 可爱微笑 */
+    .char-mouth {
+      width: 12px; height: 5px;
+      border-bottom: 2.5px solid #1a1a2e;
+      border-left: 2px solid #1a1a2e;
+      border-right: 2px solid #1a1a2e;
+      border-radius: 0 0 12px 12px;
+      position: absolute; bottom: 22px; left: 50%;
+      transform: translateX(-50%);
+      background: transparent;
+      transition: all 0.15s;
+    }
+    #character.speaking .char-mouth {
+      animation: talk 0.3s infinite;
+    }
+    @keyframes talk {
+      0%,100% { height: 5px; width: 12px; border-radius: 0 0 12px 12px; background: #e87d7d; border-color: transparent; }
+      50% { height: 11px; width: 14px; border-radius: 50%; background: #e87d7d; border-color: transparent; }
+    }
+
+    /* 小手臂 - 短胖可爱 */
+    .char-arm {
+      width: 14px; height: 17px;
+      background: linear-gradient(180deg, #86efac, #4ade80);
+      border-radius: 7px;
+      position: absolute; top: 50px;
+      transition: background 0.3s;
+    }
+    .char-arm.left { left: 2px; transform-origin: top right; }
+    .char-arm.right { right: 2px; transform-origin: top left; }
+    #character.speaking .char-arm.left {
+      animation: wave 0.5s ease-in-out infinite;
+    }
+    #character.danger .char-arm {
+      background: linear-gradient(180deg, #fca5a5, #f87171);
+    }
+    @keyframes wave {
+      0%,100% { transform: rotate(0deg); }
+      50% { transform: rotate(-28deg); }
+    }
+
+    /* 小脚 - 圆圆短短 */
+    .char-foot {
+      width: 16px; height: 10px;
+      background: linear-gradient(180deg, #22c55e, #16a34a);
+      border-radius: 50% 50% 50% 50%;
+      position: absolute; bottom: 2px;
+      transition: background 0.3s;
+    }
+    .char-foot.left { left: 16px; }
+    .char-foot.right { right: 16px; }
+    #character.danger .char-foot {
+      background: linear-gradient(180deg, #ef4444, #dc2626);
+    }
+
+    /* 小人儿气泡 */
+    #char-bubble {
+      position: absolute; top: -40px; right: -10px;
+      background: rgba(255,255,255,0.96);
+      color: #333; padding: 7px 11px;
+      border-radius: 14px; font-size: 0.78rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      max-width: 160px; white-space: normal;
+      line-height: 1.35;
+      display: none;
+    }
+    #char-bubble::after {
+      content: ''; position: absolute;
+      bottom: -6px; right: 18px;
+      width: 0; height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid rgba(255,255,255,0.96);
+    }
+
+    /* ===== 顶部状态栏 ===== */
+    #status-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      display: flex; align-items: center; gap: 8px;
+      z-index: 10;
+    }
+    #status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--dim); flex-shrink: 0;
+      transition: background 0.4s;
+    }
+    #status-dot.loading  { background: var(--accent); animation: pulse 1s infinite; }
+    #status-dot.ready    { background: var(--green); }
+    #status-dot.listening { background: var(--blue); animation: pulse 0.6s infinite; }
+    #status-dot.speaking { background: var(--green); animation: pulse 0.6s infinite; }
+    #status-dot.error    { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ===== 倒计时 + 语言徽章 ===== */
+    #countdown-badge {
+      position: fixed; top: 44px; right: 8px;
+      background: rgba(0,0,0,0.75);
+      color: var(--accent); font-size: 0.85rem; font-weight: bold;
+      padding: 3px 8px; border-radius: 12px;
+      border: 1px solid var(--accent); z-index: 10;
+      pointer-events: none;
+    }
+    #detecting-badge {
+      position: fixed; top: 44px; left: 8px;
+      background: rgba(0,230,118,0.85); color: #000;
+      font-size: 0.75rem; font-weight: bold;
+      padding: 3px 8px; border-radius: 12px;
+      z-index: 10; display: none; pointer-events: none;
+    }
+    #cur-lang-badge {
+      position: fixed; top: 44px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7); color: var(--blue);
+      font-size: 0.75rem; padding: 2px 10px;
+      border-radius: 10px; border: 1px solid var(--blue);
+      z-index: 10; pointer-events: none; display: none;
+    }
+
+    /* ===== 语音指令徽章 ===== */
+    #voice-command-badge {
+      position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,102,0,0.9); color: #fff;
+      font-size: 0.85rem; font-weight: bold;
+      padding: 8px 20px; border-radius: 20px;
+      z-index: 10; display: none; pointer-events: none;
+      box-shadow: 0 4px 15px rgba(255,102,0,0.5);
+    }
+    #voice-command-badge.listening {
+      display: block;
+      animation: pulseBig 1s ease-in-out infinite;
+    }
+    @keyframes pulseBig {
+      0%,100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
+    }
+
+    /* ===== 底部面板 ===== */
+    #bottom-panel {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(10,10,10,0.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 6px 10px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+      z-index: 10;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    #result-panel {
+      width: 100%;
+      background: rgba(20,20,20,0.88);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 8px;
+      max-height: 64px; overflow-y: auto;
+    }
+    #result-panel h2 {
+      font-size: 0.75rem; color: var(--accent);
+      margin-bottom: 2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2px;
+    }
+    #result-list {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    #result-list li {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.75rem; padding: 2px 4px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.04);
+    }
+    .conf-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .conf-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green), var(--accent)); transition: width 0.3s; }
+    .item-label { min-width: 44px; font-weight: 600; font-size: 0.75rem; }
+    .item-dist  { min-width: 44px; color: var(--blue); font-size: 0.7rem; }
+    .item-conf  { min-width: 28px; color: var(--dim); font-size: 0.65rem; text-align: right; }
+
+    /* 操作按钮行 */
+    #btn-area {
+      width: 100%; display: flex; gap: 8px;
+    }
+    .big-btn {
+      flex: 1; padding: 10px 6px;
+      font-size: 0.9rem; font-weight: 700;
+      border: none; border-radius: 8px;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      gap: 4px; touch-action: manipulation;
+      white-space: nowrap;
+    }
+    .big-btn:active { transform: scale(0.97); }
+    #btn-repeat { background: var(--accent); color: #000; }
+    #btn-repeat:disabled { background: #555; color: #888; cursor: not-allowed; }
+    #btn-detect { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+    #btn-detect:disabled { color: #555; border-color: #555; cursor: not-allowed; }
+    #btn-listen { background: var(--blue); color: #000; }
+    #btn-listen.active { background: var(--orange); color: #fff; }
+
+    /* ===== 加载覆盖层 ===== */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 1000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
+    }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-overlay p {
+      color: var(--text); font-size: 1rem;
+      text-align: center; padding: 0 20px;
+    }
+
+    #sr-announce {
+      position: absolute; left: -9999px;
+      width: 1px; height: 1px; overflow: hidden;
+    }
+
+    /* 语言切换按钮 */
+    #lang-row {
+      position: fixed; top: 80px; right: 8px;
+      display: flex; flex-direction: column; gap: 6px;
+      z-index: 10;
+    }
+    .lang-btn {
+      padding: 6px 12px; border-radius: 20px;
+      border: 2px solid rgba(255,255,255,0.4);
+      background: rgba(0,0,0,0.7);
+      color: #fff; font-size: 0.8rem; cursor: pointer;
+      touch-action: manipulation; transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: var(--accent); color: #000;
+      border-color: var(--accent); font-weight: 700;
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <header>
-            <h1>🚗 智能路况检测系统</h1>
-            <p>实时路况检测 · 语音通报 · 多语言聊天</p>
-        </header>
-        
-        <div class="main-content">
-            <div class="panel">
-                <h2>📡 路况检测</h2>
-                <div class="detection-wrapper">
-                    <div class="detection-area" id="detectionArea">
-                        <canvas id="detectionCanvas"></canvas>
-                        
-                        <div class="character-mini" id="characterMini">
-                            <div class="speech-bubble-mini hidden" id="speechBubbleMini">你好！</div>
-                            <div class="antenna-light-mini"></div>
-                            <div class="antenna-mini"></div>
-                            <div class="head">
-                                <div class="eye left"></div>
-                                <div class="eye right"></div>
-                                <div class="mouth"></div>
-                            </div>
-                            <div class="body-mini">
-                                <div class="arm-mini left"></div>
-                                <div class="arm-mini right"></div>
-                                <div class="leg-mini left"></div>
-                                <div class="leg-mini right"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="detection-status">
-                    <div class="status-item">
-                        <div class="label">检测状态</div>
-                        <div class="value" id="detectionStatus">未检测</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="label">障碍物数量</div>
-                        <div class="value" id="obstacleCount">0</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="label">最近距离</div>
-                        <div class="value" id="closestDistance">--</div>
-                    </div>
-                </div>
-                
-                <div class="controls">
-                    <button class="btn start" id="startBtn">开始检测</button>
-                    <button class="btn stop" id="stopBtn" disabled>停止检测</button>
-                </div>
-                
-                <h3 style="margin-top: 20px;">检测到的障碍物</h3>
-                <ul class="obstacle-list" id="obstacleList"></ul>
-            </div>
-            
-            <div class="panel">
-                <h2>💬 智能助手</h2>
-                <div class="language-selector" id="languageSelector">
-                    <button class="lang-btn active" data-lang="zh">中文</button>
-                    <button class="lang-btn" data-lang="en">English</button>
-                    <button class="lang-btn" data-lang="ja">日本語</button>
-                    <button class="lang-btn" data-lang="ko">한국어</button>
-                </div>
-                
-                <div class="chat-area">
-                    <div class="chat-messages" id="chatMessages"></div>
-                    <div class="chat-input">
-                        <input type="text" id="chatInput" placeholder="输入消息..." />
-                        <button class="btn start" id="sendBtn">发送</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div id="sr-announce" role="status" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- 加载界面 -->
+  <div id="loading-overlay" role="dialog" aria-label="模型加载中">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="loading-text">正在加载 AI 模型，请稍候…</p>
+  </div>
+
+  <!-- 全屏视频 -->
+  <div id="video-container">
+    <video id="webcam" autoplay muted playsinline aria-label="摄像头实时画面"></video>
+    <canvas id="overlay-canvas" aria-hidden="true"></canvas>
+    
+    <!-- 小人儿 "小路" - 可爱一体化设计（头身合一蛋形） -->
+    <div id="character" role="button" aria-label="点击与小路聊天">
+      <div id="char-bubble"></div>
+      <div class="char-antenna-light"></div>
+      <div class="char-antenna"></div>
+      <!-- 一体化身体 - 头和身体不再分离 -->
+      <div class="char-body-main">
+        <div class="char-eye left"><div class="char-eye-sparkle"></div><div class="char-eye-sparkle small"></div></div>
+        <div class="char-eye right"><div class="char-eye-sparkle"></div><div class="char-eye-sparkle small"></div></div>
+        <div class="char-cheek left"></div>
+        <div class="char-cheek right"></div>
+        <div class="char-mouth"></div>
+      </div>
+      <div class="char-arm left"></div>
+      <div class="char-arm right"></div>
+      <div class="char-foot left"></div>
+      <div class="char-foot right"></div>
     </div>
+  </div>
 
-    <script>
-        const messages = {
-            zh: {
-                greet: '你好！我是你的智能路况助手。有什么可以帮助你的吗？',
-                obstacleDetected: '检测到障碍物！距离约 {distance} 米。',
-                safe: '道路安全，无障碍物。',
-                start: '开始实时路况检测...',
-                stop: '已停止检测。',
-                help: '我可以帮你检测路况、通报障碍物，还能陪你聊天！',
-                unknown: '抱歉，我不太明白你的意思。你可以直接问我路况或者聊聊天。',
-                placeholder: '输入消息...',
-                hello: '你好！很高兴认识你！',
-                howareyou: '我很好，谢谢关心！你呢？',
-                goodbye: '再见！祝你旅途愉快！',
-                thanks: '不客气！很高兴能帮到你！',
-                weather: '天气很好呢！适合出门。',
-                name: '我叫小路，是你的智能路况助手！',
-                hobby: '我喜欢帮你检测路况，保障你的安全！',
-                age: '我是刚出生的AI助手，年龄嘛...大概是0岁吧！',
-                joke: '为什么司机不会迷路？因为他有GPS呀！哈哈哈...',
-                song: '♪ 道路千万条，安全第一条～ ♪',
-                traffic: '目前道路状况良好，请放心行驶！',
-                restaurant: '附近有很多好吃的餐厅呢！需要我帮你推荐吗？',
-                music: '听音乐可以让旅途更愉快！你喜欢什么类型的音乐？',
-                movie: '看电影是很好的休闲方式！你最近看了什么好电影吗？',
-                news: '今天有什么新鲜事吗？说来听听！',
-                food: '民以食为天！你喜欢吃什么美食？',
-                travel: '旅行可以开阔视野！你想去哪里旅行呢？',
-                sports: '运动有益健康！你喜欢什么运动？',
-                morning: '早上好！今天有什么计划吗？',
-                afternoon: '下午好！工作顺利吗？',
-                evening: '晚上好！今天辛苦了！',
-                night: '夜深了，早点休息哦！',
-                joke2: '你知道吗？障碍物最怕遇到我，因为我会提前告诉你的！',
-                trafficLight: '前方有红绿灯，请注意！',
-                speed: '当前车速正常，请保持！',
-                weatherBad: '天气不太好，请小心驾驶！',
-                foggy: '前方有雾，请减速慢行！',
-                rain: '下雨天路滑，请小心！',
-                snow: '下雪了，路面湿滑，请小心行驶！',
-                trafficJam: '前方有点堵车，建议小心驾驶！',
-                roadWork: '前方有施工，请注意绕行或小心通过！',
-                accident: '前方有事故，请小心慢行！',
-                school: '前方有学校，请注意减速！',
-                hospital: '前方有医院，急救车辆可能出没，请小心！'
-            },
-            en: {
-                greet: 'Hello! I am your intelligent road assistant. How can I help you?',
-                obstacleDetected: 'Obstacle detected! Approximately {distance} meters away.',
-                safe: 'Road is clear and safe.',
-                start: 'Starting real-time road detection...',
-                stop: 'Detection stopped.',
-                help: 'I can help detect road conditions, announce obstacles, and chat with you!',
-                unknown: 'Sorry, I don\'t understand. You can ask me about road conditions or just chat!',
-                placeholder: 'Enter message...',
-                hello: 'Hello! Nice to meet you!',
-                howareyou: 'I\'m doing well, thank you! How about you?',
-                goodbye: 'Goodbye! Have a pleasant journey!',
-                thanks: 'You\'re welcome! Happy to help!',
-                weather: 'The weather is nice today! Good for going out.',
-                name: 'My name is Xiao Lu, your intelligent road assistant!',
-                hobby: 'I like helping you detect road conditions and keep you safe!',
-                age: 'I am a newborn AI assistant, so I am 0 years old!',
-                joke: 'Why don\'t drivers get lost? Because they have GPS! Hahaha...',
-                song: '♪ Safety first on every road～ ♪',
-                traffic: 'Current road conditions are good! Drive safely!',
-                restaurant: 'There are many good restaurants nearby! Need recommendations?',
-                music: 'Music makes the journey more enjoyable! What genre do you like?',
-                movie: 'Watching movies is great entertainment! What good movies have you seen lately?',
-                news: 'What\'s new today? Tell me!',
-                food: 'Food is essential! What\'s your favorite cuisine?',
-                travel: 'Travel broadens horizons! Where would you like to go?',
-                sports: 'Sports are healthy! What sport do you like?',
-                morning: 'Good morning! Any plans for today?',
-                afternoon: 'Good afternoon! How\'s your work going?',
-                evening: 'Good evening! Hard work today!',
-                night: 'It\'s late, get some rest!',
-                joke2: 'Did you know obstacles are afraid of me? Because I tell you about them in advance!',
-                trafficLight: 'Traffic light ahead, please note!',
-                speed: 'Current speed is normal, please maintain!',
-                weatherBad: 'Bad weather ahead, please drive carefully!',
-                foggy: 'Fog ahead, please slow down!',
-                rain: 'It\'s raining, the road is slippery, please be careful!',
-                snow: 'Snowing, roads are slippery, please drive carefully!',
-                trafficJam: 'Traffic jam ahead, please drive carefully!',
-                roadWork: 'Road work ahead, please detour or pass carefully!',
-                accident: 'Accident ahead, please slow down and drive carefully!',
-                school: 'School ahead, please slow down!',
-                hospital: 'Hospital ahead, emergency vehicles may appear, please be careful!'
-            },
-            ja: {
-                greet: 'こんにちは！私はあなたのスマート道路状況アシスタントです。何かお手伝いできますか？',
-                obstacleDetected: '障害物を検出しました！距離は約 {distance} メートルです。',
-                safe: '道路は安全で、障害物はありません。',
-                start: 'リアルタイム道路検出を開始します...',
-                stop: '検出 を停止しました。',
-                help: '道路状況の検出、障害物の通知、チャットができます！',
-                unknown: '申し訳ありません、よくわかりません。道路について聞いたり、チャットしたりできますよ。',
-                placeholder: 'メッセージを入力...',
-                hello: 'こんにちは！はじめまして！',
-                howareyou: '私は元気です、ありがとう！あなたは？',
-                goodbye: 'さようなら！良い旅を！',
-                thanks: 'どういたしまして！お手伝いできて嬉しいです！',
-                weather: '今日は天気がいいですね！外出に最適です。',
-                name: '私の名前は голос 小路です、あなたのスマート道路アシスタントです！',
-                hobby: '道路状況の検出とあなたの安全を守るのが好きです！',
-                age: '私は生まれたばかりのAIアシスタントなので、まだ0歳です！',
-                joke: 'なぜ運転手は道に迷わないと思いますか？GPSを持っているからです！ハハハ...',
-                song: '♪ 安全第一の道のり～ ♪',
-                traffic: '現在の道路状況 は良好です！安全運転してください！',
-                restaurant: '近くにはおいしいレストランが很多です！おすすめしますか？',
-                music: '音楽を聴くと旅が楽しくなります！どんな音楽が好きですか？',
-                movie: '映画はいい娯楽です！最近どんな映画を見ましたか？',
-                news: '今日何か新しいことはありますか？话してみてください！',
-                food: '民は食を天とします！どんな料理が好きですか？',
-                travel: '旅行は視野を広くなります！どこに行きたいですか？',
-                sports: 'スポーツは健康にはいです！どんなスポーツが好きですか？',
-                morning: 'おはようございます！今日の予定はありますか？',
-                afternoon: 'こんにちは！仕事は順調ですか？',
-                evening: 'こんばんは！今日はお疲れ様でした！',
-                night: '夜遅くなりましたね、ゆっくり休んでください！',
-                joke2: '知道吗？障碍物最怕遇到我，因为我会提前告诉你的！',
-                trafficLight: '前方信号機があります、ご注意くささい！',
-                speed: '現在の速度は正常です、このまま保つように！',
-                weatherBad: '天気が悪いですね、ご小心に運転してください！',
-                foggy: '前に霧があります、減速してください！',
-                rain: '雨です、道が滑りやすくなっています、ご小心に！',
-                snow: '雪です、道が滑りやすくなっています、ご小心に！',
-                trafficJam: '前に交通渋帯があります、ご小心に！',
-                roadWork: '前に道路工事があります、迂回または小心に通過してくささい！',
-                accident: '前に事故があります、減速して小心に走行してください！',
-                school: '前に学校があります、減速してくささい！',
-                hospital: '前に病院があります、救急車がが出るかもしれません、ご小心に！'
-            },
-            ko: {
-                greet: '안녕하세요! 저는 당신의 스마트 도로 상황 비서입니다. 무엇을 도와드릴까요?',
-                obstacleDetected: '장애물 감지! 거리 약 {distance} 미터.',
-                safe: '도로 안전, 장애물 없음.',
-                start: '실시간 도로 검출 시작...',
-                stop: '검출 중지.',
-                help: '도로 상황 검출, 장애물 통보, 채팅 가능!',
-                unknown: '죄송합니다, 이해하지 못했습니다. 도로 상황에 대해 물어보거나 채팅할 수 있어요!',
-                placeholder: '메시지 입력...',
-                hello: '안녕하세요! 만나서 반갑습니다!',
-                howareyou: '저는 잘 지냅니다, 감사합니다! 당신은요?',
-                goodbye: '안녕히 가세요! 즐거운 여행 되세요!',
-                thanks: '천만에요! 도와드릴 수 있어서 기쁩니다!',
-                weather: '오늘 날씨가 좋네요! 산책하기 좋아요.',
-                name: '제 이름은 소로입니다, 당신의 스마트 도로 비서입니다!',
-                hobby: '도로 상황 검출하고 당신의 안전을 지키는 게 좋아요!',
-                age: '저는 막 태어난 AI 비서라서 아직 0살이에요!',
-                joke: '왜 운전기사는 길을 잃지 않을까요? GPS가 있으니까요! 하하하...',
-                song: '♪ 모든 길에서 안전이 첫 번째～ ♪',
-                traffic: '현재 도로 상황 양호합니다! 안전 운전하세요!',
-                restaurant: '근처에 맛있는 식당이 많습니다! 추천해 드릴까요?',
-                music: '음악을 들으면 여정이 더 즐거워져요! 어떤 음악을 좋아하세요?',
-                movie: '영화 보기는 좋은 오락이에요! 최근에 어떤 좋은 영화를 봤어요?',
-                news: '오늘 무슨 새로운 일 있었어요? 말씀해 주세요!',
-                food: '먹는 것은 하늘보다 중요해요! 어떤 음식을 좋아하세요?',
-                travel: '여행은 시야를 넓혀줘요! 어디로 여행가고 싶어요?',
-                sports: '스포츠는 건강에 좋아요! 어떤 스포츠를 좋아하세요?',
-                morning: '좋은 아침! 오늘 계획 있으세요?',
-                afternoon: '좋은 오후! 일 잘 되고 있어요?',
-                evening: '좋은 저녁! 오늘 수고하셨어요!',
-                night: '늦었어요, 푹 쉬세요!',
-                joke2: '知道吗？障碍物最怕遇到我，因为我会提前告诉你的！',
-                trafficLight: '전방 신호등 있습니다, 주의하세요!',
-                speed: '현재 속도 정상입니다, 유지하세요!',
-                weatherBad: '날씨가 안 좋네요, 조심해서 운전하세요!',
-                foggy: '전방에 안개 있습니다, 감속하세요!',
-                rain: '비 오고 있어요, 길이 미끄러워요, 조심하세요!',
-                snow: '눈 오고 있어요, 길이 미끄러워요, 조심하세요!',
-                trafficJam: '전방에 정체 있습니다, 조심하세요!',
-                roadWork: '전방에 도로 공사 있습니다, 우회하거나 조심해서 통과하세요!',
-                accident: '전방에 사고 있습니다, 감속해서 조심하세요!',
-                school: '전방에 학교 있습니다, 감속하세요!',
-                hospital: '전방에 병원 있습니다, 구급차 나올 수 있어요, 조심하세요!'
-            }
-        };
+  <!-- 语言切换 -->
+  <div id="lang-row">
+    <button class="lang-btn active" data-lang="zh">中文</button>
+    <button class="lang-btn" data-lang="en">English</button>
+    <button class="lang-btn" data-lang="ja">日本語</button>
+    <button class="lang-btn" data-lang="ko">한국어</button>
+  </div>
 
-        let currentLang = 'zh';
-        let isDetecting = false;
-        let detectInterval = null;
-        let obstacles = [];
-        const canvas = document.getElementById('detectionCanvas');
-        const ctx = canvas.getContext('2d');
-        const characterMini = document.getElementById('characterMini');
-        const speechBubbleMini = document.getElementById('speechBubbleMini');
-        
-        function updateLang(lang) {
-            currentLang = lang;
-            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
-            document.getElementById('chatInput').placeholder = messages[lang].placeholder;
+  <!-- 顶部状态栏 -->
+  <div id="status-bar" role="status" aria-live="polite">
+    <span id="status-dot" class="loading"></span>
+    <span id="status-text">正在初始化…</span>
+  </div>
+
+  <div id="countdown-badge">⏱ 3s</div>
+  <div id="detecting-badge">🔍 检测中…</div>
+  <div id="cur-lang-badge">CN 中文播报</div>
+  <div id="voice-command-badge">🎤 在听你说…</div>
+
+  <!-- 底部面板 -->
+  <div id="bottom-panel">
+    <div id="result-panel">
+      <h2>📋 识别结果</h2>
+      <ul id="result-list" aria-label="识别到的物体列表">
+        <li style="color:#555; font-style:italic;">等待检测…</li>
+      </ul>
+    </div>
+    <div id="btn-area">
+      <button id="btn-repeat" class="big-btn" disabled>🔊 重复播报</button>
+      <button id="btn-detect" class="big-btn" disabled>📷 立即检测</button>
+      <button id="btn-listen" class="big-btn">🎤 开始对话</button>
+    </div>
+  </div>
+
+  <script>
+    /* ========== 多语言标签映射 ========== */
+    const LABELS = {
+      zh: {
+        person:'行人', bicycle:'自行车', car:'汽车', motorcycle:'摩托车',
+        airplane:'飞机', bus:'公交车', train:'火车', truck:'卡车',
+        boat:'船', 'traffic light':'交通灯', 'fire hydrant':'消防栓',
+        'stop sign':'停车标志', bench:'长凳', bird:'鸟', cat:'猫',
+        dog:'狗', horse:'马', sheep:'羊', cow:'牛', elephant:'大象',
+        bear:'熊', zebra:'斑马', giraffe:'长颈鹿', backpack:'背包',
+        umbrella:'雨伞', handbag:'手提包', suitcase:'行李箱',
+        bottle:'瓶子', cup:'杯子', fork:'叉子', knife:'刀',
+        spoon:'勺子', bowl:'碗', banana:'香蕉', apple:'苹果',
+        sandwich:'三明治', orange:'橙子', broccoli:'西兰花',
+        carrot:'胡萝卜', 'hot dog':'热狗', pizza:'披萨',
+        donut:'甜甜圈', cake:'蛋糕', chair:'椅子', couch:'沙发',
+        'potted plant':'盆栽', bed:'床', 'dining table':'餐桌',
+        toilet:'马桶', tv:'电视', laptop:'笔记本', mouse:'鼠标',
+        remote:'遥控器', keyboard:'键盘', 'cell phone':'手机',
+        microwave:'微波炉', oven:'烤箱', sink:'水槽',
+        refrigerator:'冰箱', book:'书', clock:'时钟', vase:'花瓶',
+        scissors:'剪刀', 'teddy bear':'玩具熊', toothbrush:'牙刷',
+        door:'门', window:'窗户', stairs:'台阶',
+        dist_1m:'约1米', dist_2m:'约2米', dist_5m:'约5米', dist_far:'较远处',
+        prefix:'前方', suffix:'有', notice:'请注意。',
+        voice_lang:'zh-CN',
+        opening:'语音已开启，小路正在为您工作',
+        no_obj:'前方未检测到障碍物，道路安全。',
+        listen_start:'我在听你说，请讲话！',
+        listen_stop:'已停止对话模式',
+        chat_greet:'你好！我是小路，你的智能路况助手！检测到的物体会自动播报，你也可以直接和我说话聊天！',
+        chat_unknown:'抱歉，我不太明白。你可以直接问我路况，或者随便聊聊！',
+        greeting:'你好！很高兴和你聊天！',
+        goodbye:'再见！祝你一路平安！',
+        thanks:'不客气！随时为你效劳！',
+        joke:'为什么障碍物最怕遇到我？因为我会提前告诉你的！哈哈！',
+        song:'道路千万条，安全第一条～',
+        weather:'天气不错呢！适合出门走走。',
+        food:'民以食为天！你喜欢吃什么美食？',
+        travel:'旅行可以开阔视野！你想去哪里旅行呢？',
+        name:'我叫小路，是你的智能路况助手！',
+        hobby:'我喜欢帮你检测路况，保障你的安全！',
+        age:'我是刚出生的AI助手，大概0岁吧！',
+        help:'我可以帮你检测路况、通报障碍物，还能陪你聊天！你直接说话就行！',
+      },
+      en: {
+        person:'person', bicycle:'bicycle', car:'car', motorcycle:'motorcycle',
+        airplane:'airplane', bus:'bus', train:'train', truck:'truck',
+        boat:'boat', 'traffic light':'traffic light', 'fire hydrant':'fire hydrant',
+        'stop sign':'stop sign', bench:'bench', bird:'bird', cat:'cat',
+        dog:'dog', horse:'horse', sheep:'sheep', cow:'cow', elephant:'elephant',
+        bear:'bear', zebra:'zebra', giraffe:'giraffe', backpack:'backpack',
+        umbrella:'umbrella', handbag:'handbag', suitcase:'suitcase',
+        bottle:'bottle', cup:'cup', fork:'fork', knife:'knife',
+        spoon:'spoon', bowl:'bowl', banana:'banana', apple:'apple',
+        sandwich:'sandwich', orange:'orange', broccoli:'broccoli',
+        carrot:'carrot', 'hot dog':'hot dog', pizza:'pizza',
+        donut:'donut', cake:'cake', chair:'chair', couch:'couch',
+        'potted plant':'plant', bed:'bed', 'dining table':'table',
+        toilet:'toilet', tv:'TV', laptop:'laptop', mouse:'mouse',
+        remote:'remote', keyboard:'keyboard', 'cell phone':'phone',
+        microwave:'microwave', oven:'oven', sink:'sink',
+        refrigerator:'fridge', book:'book', clock:'clock', vase:'vase',
+        scissors:'scissors', 'teddy bear':'teddy bear', toothbrush:'toothbrush',
+        door:'door', window:'window', stairs:'stairs',
+        dist_1m:'1 meter', dist_2m:'2 meters', dist_5m:'5 meters', dist_far:'far away',
+        prefix:'', suffix:' ahead at ', notice:'Please be careful.',
+        voice_lang:'en-US',
+        opening:'Voice activated. Xiao Lu is working for you.',
+        no_obj:'No obstacles detected ahead. Road is clear.',
+        listen_start:'I am listening, please speak!',
+        listen_stop:'Conversation mode stopped.',
+        chat_greet:'Hello! I am Xiao Lu, your smart road assistant! Detected objects will be announced automatically. Feel free to chat with me!',
+        chat_unknown:'Sorry, I don\'t understand. You can ask about road conditions or just chat!',
+        greeting:'Hello! Nice to chat with you!',
+        goodbye:'Goodbye! Safe travels!',
+        thanks:'You are welcome! Always here for you!',
+        joke:'Why do obstacles fear me? Because I spot them before you do! Haha!',
+        song:'Safety first on every road~',
+        weather:'The weather looks nice today!',
+        food:'Food is essential! What is your favorite cuisine?',
+        travel:'Travel broadens horizons! Where would you like to go?',
+        name:'I am Xiao Lu, your smart road assistant!',
+        hobby:'I like helping you detect road conditions and keep you safe!',
+        age:'I am a newborn AI assistant, so I am 0 years old!',
+        help:'I can detect road conditions, announce obstacles, and chat with you! Just speak to me!',
+      },
+      ja: {
+        person:'人', bicycle:'自転車', car:'車', motorcycle:'バイク',
+        airplane:'飛行機', bus:'バス', train:'電車', truck:'トラック',
+        boat:'船', 'traffic light':'信号', bench:'ベンチ', bird:'鳥',
+        cat:'猫', dog:'犬', horse:'馬', cow:'牛', elephant:'象',
+        backpack:'リュック', umbrella:'傘', bottle:'ボトル', cup:'カップ',
+        chair:'椅子', couch:'ソファ', bed:'ベッド', tv:'テレビ',
+        laptop:'パソコン', 'cell phone':'スマホ', book:'本',
+        clock:'時計', door:'ドア', window:'窓',
+        dist_1m:'約1メートル', dist_2m:'約2メートル', dist_5m:'約5メートル', dist_far:'遠く',
+        prefix:'前方', suffix:'に', notice:'でください。',
+        voice_lang:'ja-JP',
+        opening:'音声が有効になりました。小路が動作中です。',
+        no_obj:'前方に障害物は検出されていません。道路は安全です。',
+        listen_start:'聞いていますので、話してください！',
+        listen_stop:'会話モードを停止しました。',
+        chat_greet:'こんにちは！私は小路です。あなたのスマート道路アシスタントです。検出された物体は自動的に通知されます。チャットもできます！',
+        chat_unknown:'申し訳ありません、よくわかりません。道路について聞いたり、チャットしたりできます！',
+        greeting:'こんにちは！チャットできて很开心！',
+        goodbye:'さようなら！安全な旅を！',
+        thanks:'どういたしまして！いつでもお手伝いします！',
+        joke:'なぜ障害物は私が怖いと思うのですか？因为你會提前告訴他們！ハハハ！',
+        song:'安全第一の道のり～',
+        weather:'今日は天気がいいですね！',
+        food:'民は食を天とします！どんな料理が好きですか？',
+        travel:'旅行は視野を広めます！どこに行きたいですか？',
+        name:'私は小路です、あなたのスマート道路アシスタントです！',
+        hobby:'道路状況の検出とあなたの安全を守るのが好きです！',
+        age:'私は生まれたばかりのAIアシスタントなので、まだ0歳です！',
+        help:'道路状況の検出、障害物の通知、チャットができます！気軽に話してください！',
+      },
+      ko: {
+        person:'사람', bicycle:'자전거', car:'자동차', motorcycle:'오토바이',
+        airplane:'비행기', bus:'버스', train:'기차', truck:'트럭',
+        boat:'배', 'traffic light':'신호등', bench:'벤치', bird:'새',
+        cat:'고양이', dog:'개', horse:'말', cow:'소', elephant:'코끼리',
+        backpack:'배낭', umbrella:'우산', bottle:'병', cup:'컵',
+        chair:'의자', couch:'소파', bed:'침대', tv:'TV',
+        laptop:'노트북', 'cell phone':'휴대폰', book:'책',
+        clock:'시계', door:'문', window:'창문',
+        dist_1m:'약 1미터', dist_2m:'약 2미터', dist_5m:'약 5미터', dist_far:'멀리',
+        prefix:'전방 ', suffix:'에 ', notice:'주目하세요.',
+        voice_lang:'ko-KR',
+        opening:'음성이 활성화되었습니다. 소로가 작동 중입니다.',
+        no_obj:'전방에 장애물이 감지되지 않았습니다. 도로가 안전합니다.',
+        listen_start:'듣고 있어요, 말씀하세요!',
+        listen_stop:'대화 모드를 중지했습니다.',
+        chat_greet:'안녕하세요! 저는 소로입니다, 당신의 스마트 도로 비서입니다. 감지된 물체는 자동으로 안내됩니다. 채팅도 가능합니다!',
+        chat_unknown:'죄송합니다, 이해하지 못했습니다. 도로 상황에 대해 물어보거나 채팅할 수 있어요!',
+        greeting:'안녕하세요! 채팅하게 되어 기쁩니다!',
+        goodbye:'안녕히 가세요! 안전한 여행 되세요!',
+        thanks:'천만에요! 언제든 도와드릴게요!',
+        joke:'장애물이 왜 저를 무서워할까요? 제가 미리 알려주니까요！ 하하하！',
+        song:'모든 길에서 안전이 첫 번째～',
+        weather:'오늘 날씨가 좋네요!',
+        food:'먹는 것은 하늘보다 중요해요! 어떤 음식을 좋아하세요?',
+        travel:'여행은 시야를 넓혀줘요! 어디로 여행가고 싶어요?',
+        name:'저는 소로입니다, 당신의 스마트 도로 비서입니다!',
+        hobby:'도로 상황 검출하고 당신의 안전을 지키는 게 좋아요!',
+        age:'저는 막 태어난 AI 비서라서 아직 0살이에요!',
+        help:'도로 상황 검출, 장애물 통보, 채팅이 가능합니다！편하게 말씀하세요！',
+      },
+    };
+
+    let currentLang = 'zh';
+
+    function L(key) {
+      return (LABELS[currentLang] && LABELS[currentLang][key]) || (LABELS['zh'][key]) || key;
+    }
+    function toLabel(cls) {
+      const key = cls.toLowerCase();
+      return (LABELS[currentLang] && LABELS[currentLang][key]) || (LABELS['zh'][key]) || cls;
+    }
+    function estimateDistance(bbox, vw, vh) {
+      const [, , w, h] = bbox;
+      const ratio = (w * h) / (vw * vh);
+      if (ratio > 0.25) return L('dist_1m');
+      if (ratio > 0.08) return L('dist_2m');
+      if (ratio > 0.02) return L('dist_5m');
+      return L('dist_far');
+    }
+
+    const COLOR_MAP = ['#f5c400','#00e676','#40c4ff','#ff6d00','#ea80fc','#ff4d4d','#1de9b6','#ffab40'];
+    function getColor(i) { return COLOR_MAP[i % COLOR_MAP.length]; }
+
+    /* ========== 全局状态 ========== */
+    let model = null;
+    let lastSpeech = '';
+    let countdownVal = 3;
+    let countdownInt = null;
+    let isDetecting = false;
+    let ttsVoice = null;
+    let isListening = false;
+    let recognition = null;
+
+    /* DOM */
+    const video         = document.getElementById('webcam');
+    const canvas        = document.getElementById('overlay-canvas');
+    const ctx           = canvas.getContext('2d');
+    const statusDot     = document.getElementById('status-dot');
+    const statusText    = document.getElementById('status-text');
+    const resultList    = document.getElementById('result-list');
+    const btnRepeat     = document.getElementById('btn-repeat');
+    const btnDetect     = document.getElementById('btn-detect');
+    const btnListen     = document.getElementById('btn-listen');
+    const loadingOverlay= document.getElementById('loading-overlay');
+    const loadingText   = document.getElementById('loading-text');
+    const countdownBadge= document.getElementById('countdown-badge');
+    const detectingBadge= document.getElementById('detecting-badge');
+    const srAnnounce    = document.getElementById('sr-announce');
+    const curLangBadge       = document.getElementById('cur-lang-badge');
+    const voiceCommandBadge  = document.getElementById('voice-command-badge');
+    const character     = document.getElementById('character');
+    const charBubble    = document.getElementById('char-bubble');
+
+    function setStatus(msg, mode) {
+      statusText.textContent = msg;
+      statusDot.className = mode || 'ready';
+    }
+    function announce(text) {
+      srAnnounce.textContent = '';
+      requestAnimationFrame(() => { srAnnounce.textContent = text; });
+    }
+
+    /* ========== 语言切换 ========== */
+    const LANG_NAMES = { zh:'CN 中文', en:'GB English', ja:'JP 日本語', ko:'KR 한국어' };
+
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentLang = this.dataset.lang;
+        curLangBadge.textContent = LANG_NAMES[currentLang];
+        curLangBadge.style.display = 'block';
+        pickVoice();
+      });
+    });
+
+    /* ========== 语音引擎 ========== */
+    function pickVoice() {
+      if (!('speechSynthesis' in window)) return;
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) return;
+      const langCode = L('voice_lang');
+      const langBase = langCode.split('-')[0];
+      let v = voices.find(v => v.lang === langCode && v.localService);
+      if (!v) v = voices.find(v => v.lang.startsWith(langBase) && v.localService);
+      if (!v) v = voices.find(v => v.lang === langCode);
+      if (!v) v = voices.find(v => v.lang.startsWith(langBase));
+      ttsVoice = v || null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = pickVoice;
+      pickVoice();
+    }
+
+    /* ========== 语音播报 ========== */
+    let bubbleTimer = null;
+
+    function showBubble(text) {
+      const short = text.length > 20 ? text.substring(0, 20) + '…' : text;
+      charBubble.textContent = short;
+      charBubble.style.display = 'block';
+      if (bubbleTimer) clearTimeout(bubbleTimer);
+      bubbleTimer = setTimeout(() => { charBubble.style.display = 'none'; }, 4000);
+    }
+
+    function speak(text) {
+      if (!('speechSynthesis' in window)) return;
+      announce(text);
+
+      /* 小人儿动画 */
+      character.classList.add('speaking');
+      character.classList.remove('danger');
+      showBubble(text);
+
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = L('voice_lang');
+      utt.rate = 1.0;
+      utt.pitch = 1.0;
+      utt.volume = 1.0;
+      if (ttsVoice) utt.voice = ttsVoice;
+
+      utt.onstart = () => setStatus('正在播报…', 'speaking');
+      utt.onend = () => {
+        character.classList.remove('speaking');
+        setStatus('播报完成', 'ready');
+        /* 播报完成后继续聆听 */
+        if (isListening && recognition) {
+          try { recognition.start(); } catch(e) {}
         }
-        
-        function showCharacterSpeaking(text) {
-            characterMini.classList.add('speaking', 'waving');
-            speechBubbleMini.textContent = text.length > 15 ? text.substring(0, 15) + '...' : text;
-            speechBubbleMini.classList.remove('hidden');
+      };
+      utt.onerror = () => {
+        character.classList.remove('speaking');
+        setStatus('播报完成', 'ready');
+        if (isListening && recognition) {
+          try { recognition.start(); } catch(e) {}
         }
+      };
+      window.speechSynthesis.speak(utt);
+    }
+
+    /* ========== 语音识别 ========== */
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.warn('当前浏览器不支持语音识别');
+        return null;
+      }
+      
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      
+      /* 设置语言 */
+      const langMap = { zh: 'zh-CN', en: 'en-US', ja: 'ja-JP', ko: 'ko-KR' };
+      rec.lang = langMap[currentLang] || 'zh-CN';
+      
+      rec.onstart = () => {
+        console.log('语音识别开始');
+        setStatus('正在聆听…', 'listening');
+        voiceCommandBadge.textContent = L('listen_start');
+        voiceCommandBadge.classList.add('listening');
+        character.classList.add('speaking');
+      };
+      
+      rec.onend = () => {
+        console.log('语音识别结束');
+        voiceCommandBadge.classList.remove('listening');
+        character.classList.remove('speaking');
         
-        function hideCharacterSpeaking() {
-            characterMini.classList.remove('speaking', 'waving');
-            speechBubbleMini.classList.add('hidden');
-        }
-        
-        function speak(text) {
-            showCharacterSpeaking(text);
-            
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = currentLang === 'zh' ? 'zh-CN' : currentLang === 'en' ? 'en-US' : currentLang === 'ja' ? 'ja-JP' : 'ko-KR';
-                utterance.rate = 0.9;
-                utterance.onend = function() {
-                    setTimeout(hideCharacterSpeaking, 300);
-                };
-                utterance.onerror = function() {
-                    hideCharacterSpeaking();
-                };
-                window.speechSynthesis.speak(utterance);
-            } else {
-                setTimeout(hideCharacterSpeaking, 2000);
+        /* 如果还在聆听模式，自动重启 */
+        if (isListening) {
+          setTimeout(() => {
+            if (isListening && recognition) {
+              try { recognition.start(); } catch(e) {}
             }
+          }, 500);
         }
+      };
+      
+      rec.onerror = (event) => {
+        console.warn('语音识别错误:', event.error);
+        voiceCommandBadge.classList.remove('listening');
+        character.classList.remove('speaking');
         
-        function addMessage(text, isUser = false) {
-            const messagesDiv = document.getElementById('chatMessages');
-            const div = document.createElement('div');
-            div.className = `chat-message ${isUser ? 'user' : 'bot'}`;
-            if (isUser) {
-                div.innerHTML = `<div class="content">${text}</div>`;
-            } else {
-                div.innerHTML = `<div class="avatar">🤖</div><div class="content">${text}</div>`;
-            }
-            messagesDiv.appendChild(div);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        if (event.error === 'no-speech') {
+          /* 没听到声音，继续聆听 */
+          if (isListening) {
+            setTimeout(() => {
+              if (isListening && recognition) {
+                try { recognition.start(); } catch(e) {}
+              }
+            }, 300);
+          }
+        } else if (event.error === 'not-allowed') {
+          setStatus('语音权限被拒绝', 'error');
         }
+      };
+      
+      rec.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        console.log('识别到:', transcript);
         
-        function handleChat(message) {
-            const lowerMsg = message.toLowerCase().trim();
-            const msg = messages[currentLang];
-            
-            if (lowerMsg.includes('你好') || lowerMsg.includes('hello') || lowerMsg.includes('こんにちは') || lowerMsg.includes('안녕') || lowerMsg.includes('hi')) {
-                return msg.hello;
-            } else if (lowerMsg.includes('好吗') || lowerMsg.includes('how are you') || lowerMsg.includes('元気') || lowerMsg.includes('잘 지내') || lowerMsg.includes('近来') || lowerMsg.includes('最近')) {
-                return msg.howareyou;
-            } else if (lowerMsg.includes('再见') || lowerMsg.includes('goodbye') || lowerMsg.includes('さようなら') || lowerMsg.includes('안녕히') || lowerMsg.includes('bye')) {
-                return msg.goodbye;
-            } else if (lowerMsg.includes('谢谢') || lowerMsg.includes('thank') || lowerMsg.includes('ありがとう') || lowerMsg.includes('감사') || lowerMsg.includes('thx')) {
-                return msg.thanks;
-            } else if (lowerMsg.includes('帮助') || lowerMsg.includes('help') || lowerMsg.includes('ヘルプ') || lowerMsg.includes('도움') || lowerMsg.includes('有什么用') || lowerMsg.includes('能做什么')) {
-                return msg.help;
-            } else if (lowerMsg.includes('天气') || lowerMsg.includes('weather') || lowerMsg.includes('天気') || lowerMsg.includes('날씨')) {
-                return msg.weather;
-            } else if (lowerMsg.includes('名字') || lowerMsg.includes('name') || lowerMsg.includes('名前') || lowerMsg.includes('이름') || lowerMsg.includes('你叫什么')) {
-                return msg.name;
-            } else if (lowerMsg.includes('爱好') || lowerMsg.includes('hobby') || lowerMsg.includes('趣味') || lowerMsg.includes('취미')) {
-                return msg.hobby;
-            } else if (lowerMsg.includes('年龄') || lowerMsg.includes('age') || lowerMsg.includes('年') || lowerMsg.includes('나이') || lowerMsg.includes('几岁')) {
-                return msg.age;
-            } else if (lowerMsg.includes('笑话') || lowerMsg.includes('joke') || lowerMsg.includes('冗談') || lowerMsg.includes('농담') || lowerMsg.includes('讲个笑话')) {
-                return msg.joke;
-            } else if (lowerMsg.includes('唱歌') || lowerMsg.includes('song') || lowerMsg.includes('歌') || lowerMsg.includes('노래') || lowerMsg.includes('唱')) {
-                return msg.song;
-            } else if (lowerMsg.includes('路况') || lowerMsg.includes('traffic') || lowerMsg.includes('交通') || lowerMsg.includes('교통')) {
-                return msg.traffic;
-            } else if (lowerMsg.includes('早上好') || lowerMsg.includes('早安') || lowerMsg.includes('good morning') || lowerMsg.includes('おはよう') || lowerMsg.includes('좋은 아침')) {
-                return msg.morning;
-            } else if (lowerMsg.includes('下午好') || lowerMsg.includes('good afternoon') || lowerMsg.includes('こんにちは') || lowerMsg.includes('좋은 오후')) {
-                return msg.afternoon;
-            } else if (lowerMsg.includes('晚上好') || lowerMsg.includes('good evening') || lowerMsg.includes('こんばんは') || lowerMsg.includes('좋은 저녁')) {
-                return msg.evening;
-            } else if (lowerMsg.includes('晚安') || lowerMsg.includes('good night') || lowerMsg.includes('おやすみ') || lowerMsg.includes('좋은 밤') || lowerMsg.includes('睡觉')) {
-                return msg.night;
-            } else if (lowerMsg.includes('饭店') || lowerMsg.includes('餐厅') || lowerMsg.includes('restaurant') || lowerMsg.includes('食堂') || lowerMsg.includes('식당') || lowerMsg.includes('饿了')) {
-                return msg.restaurant;
-            } else if (lowerMsg.includes('音乐') || lowerMsg.includes('music') || lowerMsg.includes('音楽') || lowerMsg.includes('음악')) {
-                return msg.music;
-            } else if (lowerMsg.includes('电影') || lowerMsg.includes('movie') || lowerMsg.includes('映画') || lowerMsg.includes('영화')) {
-                return msg.movie;
-            } else if (lowerMsg.includes('新闻') || lowerMsg.includes('news') || lowerMsg.includes('ニュース') || lowerMsg.includes('뉴스')) {
-                return msg.news;
-            } else if (lowerMsg.includes('美食') || lowerMsg.includes('food') || lowerMsg.includes('料理') || lowerMsg.includes('음식')) {
-                return msg.food;
-            } else if (lowerMsg.includes('旅行') || lowerMsg.includes('travel') || lowerMsg.includes('旅行') || lowerMsg.includes('여행')) {
-                return msg.travel;
-            } else if (lowerMsg.includes('运动') || lowerMsg.includes('sports') || lowerMsg.includes('スポーツ') || lowerMsg.includes('운동')) {
-                return msg.sports;
-            } else if (lowerMsg.includes('雾') || lowerMsg.includes('fog') || lowerMsg.includes('霧') || lowerMsg.includes('안개')) {
-                return msg.foggy;
-            } else if (lowerMsg.includes('雨') || lowerMsg.includes('rain') || lowerMsg.includes('雨') || lowerMsg.includes('비')) {
-                return msg.rain;
-            } else if (lowerMsg.includes('雪') || lowerMsg.includes('snow') || lowerMsg.includes('雪') || lowerMsg.includes('눈')) {
-                return msg.snow;
-            } else if (lowerMsg.includes('堵车') || lowerMsg.includes('塞车') || lowerMsg.includes('堵') || lowerMsg.includes('jam') || lowerMsg.includes('込') || lowerMsg.includes('정체')) {
-                return msg.trafficJam;
-            } else if (lowerMsg.includes('施工') || lowerMsg.includes('work') || lowerMsg.includes('工事') || lowerMsg.includes('공사')) {
-                return msg.roadWork;
-            } else if (lowerMsg.includes('事故') || lowerMsg.includes('accident') || lowerMsg.includes('事故') || lowerMsg.includes('사고')) {
-                return msg.accident;
-            } else if (lowerMsg.includes('学校') || lowerMsg.includes('school') || lowerMsg.includes('学校') || lowerMsg.includes('학교')) {
-                return msg.school;
-            } else if (lowerMsg.includes('医院') || lowerMsg.includes('hospital') || lowerMsg.includes('病院') || lowerMsg.includes('병원')) {
-                return msg.hospital;
-            } else {
-                return msg.unknown;
-            }
+        if (transcript) {
+          /* 处理用户输入 */
+          handleUserVoiceInput(transcript);
         }
-        
-        function drawDetection() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            gradient.addColorStop(0, '#1a1a2e');
-            gradient.addColorStop(1, '#16213e');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 30) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i, canvas.height);
-                ctx.stroke();
-            }
-            for (let i = 0; i < canvas.height; i += 30) {
-                ctx.beginPath();
-                ctx.moveTo(0, i);
-                ctx.lineTo(canvas.width, i);
-                ctx.stroke();
-            }
-            
-            ctx.fillStyle = '#4ade80';
-            ctx.beginPath();
-            ctx.arc(canvas.width / 2, canvas.height - 30, 15, 0, Math.PI * 2);
-            ctx.fill();
-            
-            obstacles.forEach((obs, index) => {
-                const x = obs.x * canvas.width;
-                const y = obs.y * canvas.height;
-                const size = 20 + Math.random() * 20;
-                
-                if (obs.distance < 30) {
-                    ctx.fillStyle = '#f87171';
-                    ctx.shadowColor = '#f87171';
-                } else if (obs.distance < 60) {
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.shadowColor = '#fbbf24';
-                } else {
-                    ctx.fillStyle = '#4ade80';
-                    ctx.shadowColor = '#4ade80';
-                }
-                ctx.shadowBlur = 15;
-                
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(obs.name, x, y + 5);
-            });
+      };
+      
+      return rec;
+    }
+
+    /* ========== 处理语音输入 ========== */
+    function handleUserVoiceInput(text) {
+      const lowerText = text.toLowerCase();
+      
+      /* 问候语 */
+      if (/你好|hello|hi|こんにちは|안녕/.test(lowerText)) {
+        speak(L('greeting'));
+      }
+      /* 再见 */
+      else if (/再见|bye|goodbye|さようなら|안녕히/.test(lowerText)) {
+        speak(L('goodbye'));
+      }
+      /* 谢谢 */
+      else if (/谢谢|thanks|ありがとう|감사/.test(lowerText)) {
+        speak(L('thanks'));
+      }
+      /* 笑话 */
+      else if (/笑话|joke|冗談|농담/.test(lowerText)) {
+        speak(L('joke'));
+      }
+      /* 唱歌 */
+      else if (/唱歌|sing|歌|노래/.test(lowerText)) {
+        speak(L('song'));
+      }
+      /* 天气 */
+      else if (/天气|weather|その他|날씨/.test(lowerText)) {
+        speak(L('weather'));
+      }
+      /* 美食 */
+      else if (/吃|food|料理|음식|饿/.test(lowerText)) {
+        speak(L('food'));
+      }
+      /* 旅行 */
+      else if (/旅行|travel|旅行|여행/.test(lowerText)) {
+        speak(L('travel'));
+      }
+      /* 名字 */
+      else if (/名字|name|名前|이름|你叫什么/.test(lowerText)) {
+        speak(L('name'));
+      }
+      /* 爱好 */
+      else if (/爱好|hobby|趣味|취미/.test(lowerText)) {
+        speak(L('hobby'));
+      }
+      /* 年龄 */
+      else if (/年龄|age|年|나이|几岁/.test(lowerText)) {
+        speak(L('age'));
+      }
+      /* 帮助 */
+      else if (/帮助|help|有什么用|何ができる|도움/.test(lowerText)) {
+        speak(L('help'));
+      }
+      /* 重复播报路况 */
+      else if (/路况|traffic|交通/.test(lowerText)) {
+        if (lastSpeech) {
+          speak(lastSpeech);
+        } else {
+          speak(L('no_obj'));
         }
-        
-        function simulateDetection() {
-            obstacles = [];
-            const count = Math.floor(Math.random() * 4);
-            
-            for (let i = 0; i < count; i++) {
-                obstacles.push({
-                    x: 0.3 + Math.random() * 0.4,
-                    y: 0.1 + Math.random() * 0.6,
-                    distance: Math.floor(10 + Math.random() * 90),
-                    name: ['行人', '车辆', '障碍物', '施工'][Math.floor(Math.random() * 4)]
-                });
-            }
-            
-            obstacles.sort((a, b) => a.distance - b.distance);
-            
-            document.getElementById('obstacleCount').textContent = obstacles.length;
-            document.getElementById('obstacleCount').className = `value ${obstacles.length > 0 ? (obstacles[0].distance < 30 ? 'danger' : 'warning') : 'safe'}`;
-            
-            if (obstacles.length > 0) {
-                document.getElementById('closestDistance').textContent = obstacles[0].distance + 'm';
-                document.getElementById('closestDistance').className = `value ${obstacles[0].distance < 30 ? 'danger' : obstacles[0].distance < 60 ? 'warning' : 'safe'}`;
-                
-                const closest = obstacles[0];
-                speak(messages[currentLang].obstacleDetected.replace('{distance}', closest.distance));
-            } else {
-                document.getElementById('closestDistance').textContent = '--';
-                document.getElementById('closestDistance').className = 'value safe';
-                speak(messages[currentLang].safe);
-            }
-            
-            const list = document.getElementById('obstacleList');
-            list.innerHTML = obstacles.map(obs => 
-                `<li class="obstacle-item">
-                    <span class="name">${obs.name}</span>
-                    <span class="distance">${obs.distance}m</span>
-                </li>`
-            ).join('');
-            
-            drawDetection();
+      }
+      /* 停止聆听 */
+      else if (/停止|stop|止め|멈춰/.test(lowerText)) {
+        stopListening();
+        speak(L('listen_stop'));
+      }
+      /* 默认回复 */
+      else {
+        speak(L('chat_unknown'));
+      }
+    }
+
+    /* ========== 聆听控制 ========== */
+    function startListening() {
+      if (!recognition) {
+        recognition = initSpeechRecognition();
+      }
+      
+      if (!recognition) {
+        speak('抱歉，您的浏览器不支持语音识别功能');
+        return;
+      }
+      
+      isListening = true;
+      btnListen.classList.add('active');
+      btnListen.textContent = '🎤 停止对话';
+      
+      try {
+        recognition.start();
+      } catch(e) {
+        console.warn('语音识别启动失败:', e);
+      }
+      
+      speak(L('listen_start'));
+    }
+
+    function stopListening() {
+      isListening = false;
+      btnListen.classList.remove('active');
+      btnListen.textContent = '🎤 开始对话';
+      
+      voiceCommandBadge.classList.remove('listening');
+      character.classList.remove('speaking');
+      
+      if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+      }
+    }
+
+    function toggleListening() {
+      if (isListening) {
+        stopListening();
+        speak(L('listen_stop'));
+      } else {
+        startListening();
+      }
+    }
+
+    /* ========== 物体检测 ========== */
+    async function runDetection() {
+      if (isDetecting || !model || video.readyState < 2) return;
+      isDetecting = true;
+      detectingBadge.style.display = 'block';
+      setStatus('正在识别物体…', 'loading');
+
+      let predictions = [];
+      try {
+        predictions = await model.detect(video);
+      } catch (err) {
+        console.warn('推理出错', err);
+      }
+
+      const filtered = predictions.filter(p => p.score > 0.4);
+      resizeCanvas();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let hasDanger = false;
+      filtered.forEach((pred, i) => {
+        const [x, y, w, h] = pred.bbox;
+        const color = getColor(i);
+        const label = toLabel(pred.class);
+        const dist  = estimateDistance(pred.bbox, canvas.width, canvas.height);
+        const conf  = (pred.score * 100).toFixed(0);
+
+        /* 判断是否近距离危险 */
+        const ratio = (w * h) / (canvas.width * canvas.height);
+        if (ratio > 0.15) hasDanger = true;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, canvas.width / 200);
+        ctx.strokeRect(x, y, w, h);
+
+        const fontSize = Math.max(14, Math.round(canvas.width / 35));
+        const tagH = fontSize + 8;
+        const labelText = `${label} ${dist} ${conf}%`;
+        ctx.font = `bold ${fontSize}px "Microsoft YaHei", "PingFang SC", sans-serif`;
+        const textW = ctx.measureText(labelText).width;
+        const tagY = y > tagH + 4 ? y - tagH - 4 : y + h + 4;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, tagY, textW + 12, tagH);
+        ctx.fillStyle = '#000';
+        ctx.fillText(labelText, x + 6, tagY + fontSize - 1);
+      });
+
+      /* 小人儿危险状态 */
+      if (hasDanger) {
+        character.classList.add('danger');
+      } else {
+        character.classList.remove('danger');
+      }
+
+      /* 结果列表 */
+      if (filtered.length === 0) {
+        resultList.innerHTML = '<li style="color:#555;font-style:italic;">本次未检测到目标</li>';
+      } else {
+        resultList.innerHTML = filtered.map((pred, i) => {
+          const color = getColor(i);
+          const label = toLabel(pred.class);
+          const dist  = estimateDistance(pred.bbox, canvas.width, canvas.height);
+          const conf  = (pred.score * 100).toFixed(0);
+          return `<li>
+            <span class="item-label" style="color:${color}">${label}</span>
+            <div class="conf-bar-wrap"><div class="conf-bar" style="width:${conf}%"></div></div>
+            <span class="item-dist">${dist}</span>
+            <span class="item-conf">${conf}%</span>
+          </li>`;
+        }).join('');
+      }
+
+      /* 语音播报 */
+      if (filtered.length > 0) {
+        const top3 = filtered.slice(0, 3);
+        let parts;
+        if (currentLang === 'zh') {
+          parts = top3.map(p => `前方${estimateDistance(p.bbox, canvas.width, canvas.height)}有${toLabel(p.class)}`);
+          lastSpeech = parts.join('，') + '，请注意。';
+        } else if (currentLang === 'en') {
+          parts = top3.map(p => `${toLabel(p.class)} at ${estimateDistance(p.bbox, canvas.width, canvas.height)} ahead`);
+          lastSpeech = parts.join(', ') + '. Please be careful.';
+        } else if (currentLang === 'ja') {
+          parts = top3.map(p => `前方${estimateDistance(p.bbox, canvas.width, canvas.height)}に${toLabel(p.class)}`);
+          lastSpeech = parts.join('、') + '。でください。';
+        } else if (currentLang === 'ko') {
+          parts = top3.map(p => `전방 ${estimateDistance(p.bbox, canvas.width, canvas.height)}에 ${toLabel(p.class)}`);
+          lastSpeech = parts.join(', ') + '. 주의하세요.';
         }
-        
-        document.getElementById('startBtn').addEventListener('click', () => {
-            isDetecting = true;
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('detectionStatus').textContent = '检测中';
-            document.getElementById('detectionStatus').className = 'value danger';
-            
-            speak(messages[currentLang].start);
-            simulateDetection();
-            detectInterval = setInterval(simulateDetection, 3000);
+        speak(lastSpeech);
+      } else {
+        lastSpeech = L('no_obj');
+      }
+
+      detectingBadge.style.display = 'none';
+      setStatus(`上次检测：发现 ${filtered.length} 个物体`, 'ready');
+      isDetecting = false;
+    }
+
+    /* ========== 自动检测 ========== */
+    function startAutoDetect() {
+      runDetection();
+      countdownVal = 3;
+      countdownBadge.textContent = `⏱ ${countdownVal}s`;
+      if (countdownInt) clearInterval(countdownInt);
+      countdownInt = setInterval(() => {
+        countdownVal--;
+        if (countdownVal <= 0) { countdownVal = 3; runDetection(); }
+        countdownBadge.textContent = `⏱ ${countdownVal}s`;
+      }, 1000);
+    }
+
+    function resizeCanvas() {
+      canvas.width  = video.videoWidth  || 640;
+      canvas.height = video.videoHeight || 480;
+    }
+
+    /* ========== 事件绑定 ========== */
+    btnRepeat.addEventListener('click', () => {
+      if (lastSpeech) speak(lastSpeech);
+      else speak(L('no_obj'));
+    });
+
+    btnDetect.addEventListener('click', () => {
+      if (countdownInt) clearInterval(countdownInt);
+      countdownVal = 3;
+      startAutoDetect();
+    });
+
+    btnListen.addEventListener('click', toggleListening);
+    
+    /* 点击小人儿也可以开始对话 */
+    character.addEventListener('click', toggleListening);
+
+    /* ========== 音频解锁（iOS / 安卓 WebView） ========== */
+    function unlockAudio() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        const actx = new AC();
+        if (actx.state === 'suspended') actx.resume();
+        const buf = actx.createBuffer(1, 1, 22050);
+        const src = actx.createBufferSource();
+        src.buffer = buf;
+        src.connect(actx.destination);
+        src.start(0);
+      }
+      if (window.speechSynthesis) {
+        const utt = new SpeechSynthesisUtterance('');
+        utt.volume = 0;
+        window.speechSynthesis.speak(utt);
+      }
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+    }
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+
+    /* ========== 主流程 ========== */
+    (async function main() {
+      setStatus('正在加载 AI 模型…', 'loading');
+
+      try {
+        loadingText.textContent = '正在加载 COCO-SSD 模型（首次约需 10-30 秒）…';
+        model = await cocoSsd.load({ base: 'mobilenet_v2' });
+      } catch (err) {
+        loadingText.textContent = '模型加载失败，请刷新重试。';
+        setStatus('AI 模型加载失败', 'error');
+        return;
+      }
+
+      loadingText.textContent = '正在获取摄像头权限…';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
         });
-        
-        document.getElementById('stopBtn').addEventListener('click', () => {
-            isDetecting = false;
-            clearInterval(detectInterval);
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('detectionStatus').textContent = '已停止';
-            document.getElementById('detectionStatus').className = 'value safe';
-            
-            speak(messages[currentLang].stop);
-            obstacles = [];
-            drawDetection();
-        });
-        
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            
-            if (message) {
-                addMessage(message, true);
-                const response = handleChat(message);
-                setTimeout(() => {
-                    addMessage(response);
-                    speak(response);
-                }, 500);
-                input.value = '';
-            }
-        });
-        
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('sendBtn').click();
-            }
-        });
-        
-        document.querySelectorAll('.lang-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                updateLang(btn.dataset.lang);
-            });
-        });
-        
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-        drawDetection();
-        
-        setTimeout(() => {
-            addMessage(messages[currentLang].greet);
-            speak(messages[currentLang].greet);
-        }, 500);
-        
-        window.addEventListener('resize', () => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            drawDetection();
-        });
-    </script>
-</body></html>
+        video.srcObject = stream;
+        await new Promise(resolve => { video.onloadedmetadata = resolve; });
+        await video.play();
+      } catch (err) {
+        loadingText.textContent = '无法访问摄像头，请检查权限后刷新。';
+        setStatus('摄像头权限被拒绝', 'error');
+        return;
+      }
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      loadingOverlay.style.display = 'none';
+
+      btnRepeat.disabled = false;
+      btnDetect.disabled = false;
+      setStatus('正在检测中…', 'ready');
+      startAutoDetect();
+
+      /* 初始化语音识别 */
+      recognition = initSpeechRecognition();
+      
+      /* 显示语言选择提示 */
+      curLangBadge.textContent = LANG_NAMES[currentLang];
+      curLangBadge.style.display = 'block';
+
+      /* 小人儿初始打招呼 */
+      showBubble(L('chat_greet').substring(0, 18) + '…');
+      setTimeout(() => {
+        speak(L('chat_greet'));
+      }, 1500);
+    })();
+  </script>
+</body>
+</html>
