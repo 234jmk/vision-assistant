@@ -189,6 +189,43 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 20px;
     }
+
+    /* ===== 点击开始覆盖层（解决移动端音频权限） ===== */
+    #start-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 1001;
+      display: none; /* 默认隐藏，等加载完成后显示 */
+      flex-direction: column;
+      align-items: center; justify-content: center; gap: 24px;
+      padding: 40px;
+    }
+    #start-overlay.visible {
+      display: flex;
+    }
+    #start-btn {
+      padding: 20px 48px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #000;
+      background: var(--accent);
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+      box-shadow: 0 8px 30px rgba(245,196,0,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #start-btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 4px 15px rgba(245,196,0,0.3);
+    }
+    #start-hint {
+      color: var(--dim);
+      font-size: 0.85rem;
+      text-align: center;
+      line-height: 1.6;
+    }
     .spinner {
       width: 50px; height: 50px;
       border: 5px solid var(--border);
@@ -234,6 +271,14 @@
   <div id="loading-overlay" role="dialog" aria-label="模型加载中">
     <div class="spinner" aria-hidden="true"></div>
     <p id="loading-text">正在加载 AI 模型，请稍候…</p>
+  </div>
+
+  <!-- 点击开始界面（解决移动端语音权限问题） -->
+  <div id="start-overlay" role="dialog" aria-label="启动确认">
+    <div style="width:80px;height:80px;border:6px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
+    <p style="color:var(--accent);font-size:1.1rem;font-weight:bold;">模型与摄像头已就绪</p>
+    <button id="start-btn">👆 点击开始使用</button>
+    <p id="start-hint">首次使用请点击上方按钮激活语音播报<br>部分浏览器需要用户手势才能播放声音</p>
   </div>
 
   <!-- 全屏视频 -->
@@ -484,6 +529,8 @@
     const srAnnounce    = document.getElementById('sr-announce');
     const curLangBadge       = document.getElementById('cur-lang-badge');
     const voiceCommandBadge  = document.getElementById('voice-command-badge');
+    const startOverlay       = document.getElementById('start-overlay');
+    const startBtn           = document.getElementById('start-btn');
 
     function setStatus(msg, mode) {
       statusText.textContent = msg;
@@ -860,7 +907,7 @@
 
     btnListen.addEventListener('click', toggleListening);
 
-    /* ========== 音频解锁（iOS / 安卓 WebView） ========== */
+    /* ========== 音频解锁（必须通过用户手势调用） ========== */
     function unlockAudio() {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (AC) {
@@ -873,15 +920,36 @@
         src.start(0);
       }
       if (window.speechSynthesis) {
-        const utt = new SpeechSynthesisUtterance('');
+        window.speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(' ');
         utt.volume = 0;
         window.speechSynthesis.speak(utt);
       }
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('click', unlockAudio);
     }
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-    document.addEventListener('click', unlockAudio, { once: true });
+
+    /* ========== 点击开始 ========== */
+    function onUserStart() {
+      console.log('[PWA] 用户点击开始，解锁音频');
+      unlockAudio();
+      startOverlay.classList.remove('visible');
+
+      btnRepeat.disabled = false;
+      btnDetect.disabled = false;
+      setStatus('正在检测中…', 'ready');
+      startAutoDetect();
+
+      /* 初始化语音识别 */
+      recognition = initSpeechRecognition();
+
+      /* 显示语言选择提示 */
+      curLangBadge.textContent = LANG_NAMES[currentLang];
+      curLangBadge.style.display = 'block';
+
+      /* 语音打招呼 */
+      setTimeout(() => {
+        speak(L('opening'));
+      }, 300);
+    }
 
     /* ========== 主流程 ========== */
     (async function main() {
@@ -915,22 +983,9 @@
       window.addEventListener('resize', resizeCanvas);
       loadingOverlay.style.display = 'none';
 
-      btnRepeat.disabled = false;
-      btnDetect.disabled = false;
-      setStatus('正在检测中…', 'ready');
-      startAutoDetect();
-
-      /* 初始化语音识别 */
-      recognition = initSpeechRecognition();
-
-      /* 显示语言选择提示 */
-      curLangBadge.textContent = LANG_NAMES[currentLang];
-      curLangBadge.style.display = 'block';
-
-      /* 启动后语音打招呼 */
-      setTimeout(() => {
-        speak(L('opening'));
-      }, 1500);
+      /* 显示点击开始界面 */
+      startOverlay.classList.add('visible');
+      startBtn.addEventListener('click', onUserStart, { once: true });
     })();
   </script>
 </body>
