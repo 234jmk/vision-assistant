@@ -14,8 +14,48 @@
         .panel { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 25px; color: #fff; }
         .panel h2 { margin-bottom: 20px; font-size: 1.3em; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
         
+        .detection-wrapper { position: relative; }
         .detection-area { height: 300px; background: #0a0a0f; border-radius: 10px; position: relative; overflow: hidden; margin-bottom: 20px; }
         .detection-area canvas { width: 100%; height: 100%; }
+        
+        .character-mini { position: absolute; bottom: 10px; right: 10px; width: 60px; height: 80px; z-index: 10; cursor: pointer; }
+        .character-mini .head { width: 30px; height: 30px; background: linear-gradient(135deg, #ffdab9, #f5deb3); border-radius: 50%; position: absolute; top: 0; left: 50%; transform: translateX(-50%); box-shadow: inset -3px -3px 6px rgba(0,0,0,0.1); }
+        .character-mini .eye { width: 5px; height: 5px; background: #333; border-radius: 50%; position: absolute; top: 35%; }
+        .character-mini .eye.left { left: 25%; }
+        .character-mini .eye.right { right: 25%; }
+        .character-mini .mouth { width: 10px; height: 5px; background: #e87d7d; border-radius: 0 0 8px 8px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%); }
+        .character-mini .body-mini { width: 25px; height: 30px; background: linear-gradient(135deg, #4ade80, #22c55e); border-radius: 8px 8px 5px 5px; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); }
+        .character-mini .arm-mini { width: 8px; height: 18px; background: linear-gradient(135deg, #ffdab9, #f5deb3); border-radius: 4px; position: absolute; bottom: 45%; }
+        .character-mini .arm-mini.left { left: 3px; transform-origin: bottom right; }
+        .character-mini .arm-mini.right { right: 3px; transform-origin: bottom left; }
+        .character-mini .leg-mini { width: 8px; height: 15px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 4px; position: absolute; bottom: -15px; }
+        .character-mini .leg-mini.left { left: 8px; }
+        .character-mini .leg-mini.right { right: 8px; }
+        .character-mini .antenna-mini { width: 2px; height: 10px; background: #fbbf24; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); }
+        .character-mini .antenna-light-mini { width: 6px; height: 6px; background: #fbbf24; border-radius: 50%; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 8px #fbbf24, 0 0 15px #fbbf24; animation: blink 2s infinite; }
+        
+        .character-mini.speaking .mouth { animation: talk 0.3s infinite; }
+        .character-mini.waving .arm-mini.left { animation: wave-left 0.5s ease-in-out infinite; }
+        
+        .speech-bubble-mini { background: rgba(255,255,255,0.95); color: #333; padding: 8px 12px; border-radius: 15px; position: absolute; top: -50px; right: 0; white-space: nowrap; font-size: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); max-width: 180px; }
+        .speech-bubble-mini::after { content: ''; position: absolute; bottom: -6px; right: 20px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid rgba(255,255,255,0.95); }
+        .speech-bubble-mini.hidden { display: none; }
+        
+        @keyframes talk {
+            0%, 100% { height: 5px; border-radius: 0 0 8px 8px; }
+            50% { height: 10px; border-radius: 50%; }
+        }
+        
+        @keyframes wave-left {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-30deg); }
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px #fbbf24, 0 0 15px #fbbf24; }
+            50% { opacity: 0.5; box-shadow: 0 0 4px #fbbf24; }
+        }
+        
         .detection-status { display: flex; justify-content: space-between; margin-bottom: 15px; }
         .status-item { text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
         .status-item .label { font-size: 0.8em; color: #888; }
@@ -30,7 +70,7 @@
         .btn.stop { background: linear-gradient(135deg, #f87171, #ef4444); color: #fff; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         
-        .chat-area { display: flex; flex-direction: column; height: 500px; }
+        .chat-area { display: flex; flex-direction: column; height: 450px; }
         .chat-messages { flex: 1; overflow-y: auto; background: #0a0a0f; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
         .chat-message { margin-bottom: 15px; max-width: 80%; }
         .chat-message.user { text-align: right; }
@@ -52,47 +92,6 @@
         .obstacle-item .name { font-weight: bold; }
         .obstacle-item .distance { font-size: 0.9em; color: #888; }
         
-        .character-container { text-align: center; margin-bottom: 15px; }
-        .character { display: inline-block; position: relative; }
-        .character-body { width: 80px; height: 120px; position: relative; }
-        .head { width: 50px; height: 50px; background: linear-gradient(135deg, #ffdab9, #f5deb3); border-radius: 50%; position: absolute; top: 0; left: 50%; transform: translateX(-50%); box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1); }
-        .eye { width: 8px; height: 8px; background: #333; border-radius: 50%; position: absolute; top: 35%; }
-        .eye.left { left: 25%; }
-        .eye.right { right: 25%; }
-        .mouth { width: 15px; height: 8px; background: #e87d7d; border-radius: 0 0 10px 10px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%); transition: all 0.1s; }
-        .mouth.talking { animation: talk 0.3s infinite; }
-        .body { width: 40px; height: 50px; background: linear-gradient(135deg, #4ade80, #22c55e); border-radius: 10px 10px 5px 5px; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); }
-        .arm { width: 12px; height: 30px; background: linear-gradient(135deg, #ffdab9, #f5deb3); border-radius: 6px; position: absolute; bottom: 40%; }
-        .arm.left { left: 5px; transform-origin: bottom right; animation: wave-left 1s ease-in-out infinite; }
-        .arm.right { right: 5px; transform-origin: bottom left; }
-        .leg { width: 12px; height: 25px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 6px; position: absolute; bottom: -25px; }
-        .leg.left { left: 10px; }
-        .leg.right { right: 10px; }
-        .antenna { width: 3px; height: 15px; background: #fbbf24; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); }
-        .antenna-light { width: 8px; height: 8px; background: #fbbf24; border-radius: 50%; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px #fbbf24, 0 0 20px #fbbf24; animation: blink 2s infinite; }
-        
-        @keyframes talk {
-            0%, 100% { height: 8px; border-radius: 0 0 10px 10px; }
-            50% { height: 15px; border-radius: 50%; }
-        }
-        
-        @keyframes wave-left {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(-30deg); }
-        }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 1; box-shadow: 0 0 10px #fbbf24, 0 0 20px #fbbf24; }
-            50% { opacity: 0.5; box-shadow: 0 0 5px #fbbf24; }
-        }
-        
-        .character.speaking .mouth { animation: talk 0.3s infinite; }
-        .character.waving .arm.left { animation: wave-left 0.5s ease-in-out infinite; }
-        
-        .speech-bubble { background: rgba(255,255,255,0.95); color: #333; padding: 10px 15px; border-radius: 20px; position: absolute; top: -80px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-width: 200px; }
-        .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid rgba(255,255,255,0.95); }
-        .speech-bubble.hidden { display: none; }
-        
         @media (max-width: 768px) {
             .main-content { grid-template-columns: 1fr; }
         }
@@ -108,8 +107,27 @@
         <div class="main-content">
             <div class="panel">
                 <h2>📡 路况检测</h2>
-                <div class="detection-area" id="detectionArea">
-                    <canvas id="detectionCanvas"></canvas>
+                <div class="detection-wrapper">
+                    <div class="detection-area" id="detectionArea">
+                        <canvas id="detectionCanvas"></canvas>
+                        
+                        <div class="character-mini" id="characterMini">
+                            <div class="speech-bubble-mini hidden" id="speechBubbleMini">你好！</div>
+                            <div class="antenna-light-mini"></div>
+                            <div class="antenna-mini"></div>
+                            <div class="head">
+                                <div class="eye left"></div>
+                                <div class="eye right"></div>
+                                <div class="mouth"></div>
+                            </div>
+                            <div class="body-mini">
+                                <div class="arm-mini left"></div>
+                                <div class="arm-mini right"></div>
+                                <div class="leg-mini left"></div>
+                                <div class="leg-mini right"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="detection-status">
@@ -145,25 +163,6 @@
                     <button class="lang-btn" data-lang="ko">한국어</button>
                 </div>
                 
-                <div class="character-container">
-                    <div class="character" id="character">
-                        <div class="speech-bubble hidden" id="speechBubble">你好！</div>
-                        <div class="antenna-light"></div>
-                        <div class="antenna"></div>
-                        <div class="head">
-                            <div class="eye left"></div>
-                            <div class="eye right"></div>
-                            <div class="mouth"></div>
-                        </div>
-                        <div class="body">
-                            <div class="arm left"></div>
-                            <div class="arm right"></div>
-                            <div class="leg left"></div>
-                            <div class="leg right"></div>
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="chat-area">
                     <div class="chat-messages" id="chatMessages"></div>
                     <div class="chat-input">
@@ -184,40 +183,130 @@
                 start: '开始实时路况检测...',
                 stop: '已停止检测。',
                 help: '我可以帮你检测路况、通报障碍物，还能陪你聊天！',
-                unknown: '抱歉，我不太明白你的意思。',
+                unknown: '抱歉，我不太明白你的意思。你可以直接问我路况或者聊聊天。',
                 placeholder: '输入消息...',
                 hello: '你好！很高兴认识你！',
                 howareyou: '我很好，谢谢关心！你呢？',
                 goodbye: '再见！祝你旅途愉快！',
-                thanks: '不客气！很高兴能帮到你！'
+                thanks: '不客气！很高兴能帮到你！',
+                weather: '天气很好呢！适合出门。',
+                name: '我叫小路，是你的智能路况助手！',
+                hobby: '我喜欢帮你检测路况，保障你的安全！',
+                age: '我是刚出生的AI助手，年龄嘛...大概是0岁吧！',
+                joke: '为什么司机不会迷路？因为他有GPS呀！哈哈哈...',
+                song: '♪ 道路千万条，安全第一条～ ♪',
+                traffic: '目前道路状况良好，请放心行驶！',
+                restaurant: '附近有很多好吃的餐厅呢！需要我帮你推荐吗？',
+                music: '听音乐可以让旅途更愉快！你喜欢什么类型的音乐？',
+                movie: '看电影是很好的休闲方式！你最近看了什么好电影吗？',
+                news: '今天有什么新鲜事吗？说来听听！',
+                food: '民以食为天！你喜欢吃什么美食？',
+                travel: '旅行可以开阔视野！你想去哪里旅行呢？',
+                sports: '运动有益健康！你喜欢什么运动？',
+                morning: '早上好！今天有什么计划吗？',
+                afternoon: '下午好！工作顺利吗？',
+                evening: '晚上好！今天辛苦了！',
+                night: '夜深了，早点休息哦！',
+                joke2: '你知道吗？障碍物最怕遇到我，因为我会提前告诉你的！',
+                trafficLight: '前方有红绿灯，请注意！',
+                speed: '当前车速正常，请保持！',
+                weatherBad: '天气不太好，请小心驾驶！',
+                foggy: '前方有雾，请减速慢行！',
+                rain: '下雨天路滑，请小心！',
+                snow: '下雪了，路面湿滑，请小心行驶！',
+                trafficJam: '前方有点堵车，建议小心驾驶！',
+                roadWork: '前方有施工，请注意绕行或小心通过！',
+                accident: '前方有事故，请小心慢行！',
+                school: '前方有学校，请注意减速！',
+                hospital: '前方有医院，急救车辆可能出没，请小心！'
             },
             en: {
-                greet: 'Hello! I am your intelligent road condition assistant. How can I help you?',
+                greet: 'Hello! I am your intelligent road assistant. How can I help you?',
                 obstacleDetected: 'Obstacle detected! Approximately {distance} meters away.',
                 safe: 'Road is clear and safe.',
                 start: 'Starting real-time road detection...',
                 stop: 'Detection stopped.',
                 help: 'I can help detect road conditions, announce obstacles, and chat with you!',
-                unknown: 'Sorry, I don\'t understand.',
+                unknown: 'Sorry, I don\'t understand. You can ask me about road conditions or just chat!',
                 placeholder: 'Enter message...',
                 hello: 'Hello! Nice to meet you!',
                 howareyou: 'I\'m doing well, thank you! How about you?',
                 goodbye: 'Goodbye! Have a pleasant journey!',
-                thanks: 'You\'re welcome! Happy to help!'
+                thanks: 'You\'re welcome! Happy to help!',
+                weather: 'The weather is nice today! Good for going out.',
+                name: 'My name is Xiao Lu, your intelligent road assistant!',
+                hobby: 'I like helping you detect road conditions and keep you safe!',
+                age: 'I am a newborn AI assistant, so I am 0 years old!',
+                joke: 'Why don\'t drivers get lost? Because they have GPS! Hahaha...',
+                song: '♪ Safety first on every road～ ♪',
+                traffic: 'Current road conditions are good! Drive safely!',
+                restaurant: 'There are many good restaurants nearby! Need recommendations?',
+                music: 'Music makes the journey more enjoyable! What genre do you like?',
+                movie: 'Watching movies is great entertainment! What good movies have you seen lately?',
+                news: 'What\'s new today? Tell me!',
+                food: 'Food is essential! What\'s your favorite cuisine?',
+                travel: 'Travel broadens horizons! Where would you like to go?',
+                sports: 'Sports are healthy! What sport do you like?',
+                morning: 'Good morning! Any plans for today?',
+                afternoon: 'Good afternoon! How\'s your work going?',
+                evening: 'Good evening! Hard work today!',
+                night: 'It\'s late, get some rest!',
+                joke2: 'Did you know obstacles are afraid of me? Because I tell you about them in advance!',
+                trafficLight: 'Traffic light ahead, please note!',
+                speed: 'Current speed is normal, please maintain!',
+                weatherBad: 'Bad weather ahead, please drive carefully!',
+                foggy: 'Fog ahead, please slow down!',
+                rain: 'It\'s raining, the road is slippery, please be careful!',
+                snow: 'Snowing, roads are slippery, please drive carefully!',
+                trafficJam: 'Traffic jam ahead, please drive carefully!',
+                roadWork: 'Road work ahead, please detour or pass carefully!',
+                accident: 'Accident ahead, please slow down and drive carefully!',
+                school: 'School ahead, please slow down!',
+                hospital: 'Hospital ahead, emergency vehicles may appear, please be careful!'
             },
             ja: {
                 greet: 'こんにちは！私はあなたのスマート道路状況アシスタントです。何かお手伝いできますか？',
                 obstacleDetected: '障害物を検出しました！距離は約 {distance} メートルです。',
                 safe: '道路は安全で、障害物はありません。',
                 start: 'リアルタイム道路検出を開始します...',
-                stop: '検出を停止しました。',
+                stop: '検出 を停止しました。',
                 help: '道路状況の検出、障害物の通知、チャットができます！',
-                unknown: '申し訳ありません、よくわかりません。',
+                unknown: '申し訳ありません、よくわかりません。道路について聞いたり、チャットしたりできますよ。',
                 placeholder: 'メッセージを入力...',
                 hello: 'こんにちは！はじめまして！',
                 howareyou: '私は元気です、ありがとう！あなたは？',
                 goodbye: 'さようなら！良い旅を！',
-                thanks: 'どういたしまして！お手伝いできて嬉しいです！'
+                thanks: 'どういたしまして！お手伝いできて嬉しいです！',
+                weather: '今日は天気がいいですね！外出に最適です。',
+                name: '私の名前は голос 小路です、あなたのスマート道路アシスタントです！',
+                hobby: '道路状況の検出とあなたの安全を守るのが好きです！',
+                age: '私は生まれたばかりのAIアシスタントなので、まだ0歳です！',
+                joke: 'なぜ運転手は道に迷わないと思いますか？GPSを持っているからです！ハハハ...',
+                song: '♪ 安全第一の道のり～ ♪',
+                traffic: '現在の道路状況 は良好です！安全運転してください！',
+                restaurant: '近くにはおいしいレストランが很多です！おすすめしますか？',
+                music: '音楽を聴くと旅が楽しくなります！どんな音楽が好きですか？',
+                movie: '映画はいい娯楽です！最近どんな映画を見ましたか？',
+                news: '今日何か新しいことはありますか？话してみてください！',
+                food: '民は食を天とします！どんな料理が好きですか？',
+                travel: '旅行は視野を広くなります！どこに行きたいですか？',
+                sports: 'スポーツは健康にはいです！どんなスポーツが好きですか？',
+                morning: 'おはようございます！今日の予定はありますか？',
+                afternoon: 'こんにちは！仕事は順調ですか？',
+                evening: 'こんばんは！今日はお疲れ様でした！',
+                night: '夜遅くなりましたね、ゆっくり休んでください！',
+                joke2: '知道吗？障碍物最怕遇到我，因为我会提前告诉你的！',
+                trafficLight: '前方信号機があります、ご注意くささい！',
+                speed: '現在の速度は正常です、このまま保つように！',
+                weatherBad: '天気が悪いですね、ご小心に運転してください！',
+                foggy: '前に霧があります、減速してください！',
+                rain: '雨です、道が滑りやすくなっています、ご小心に！',
+                snow: '雪です、道が滑りやすくなっています、ご小心に！',
+                trafficJam: '前に交通渋帯があります、ご小心に！',
+                roadWork: '前に道路工事があります、迂回または小心に通過してくささい！',
+                accident: '前に事故があります、減速して小心に走行してください！',
+                school: '前に学校があります、減速してくささい！',
+                hospital: '前に病院があります、救急車がが出るかもしれません、ご小心に！'
             },
             ko: {
                 greet: '안녕하세요! 저는 당신의 스마트 도로 상황 비서입니다. 무엇을 도와드릴까요?',
@@ -226,12 +315,42 @@
                 start: '실시간 도로 검출 시작...',
                 stop: '검출 중지.',
                 help: '도로 상황 검출, 장애물 통보, 채팅 가능!',
-                unknown: '죄송합니다, 이해하지 못했습니다.',
+                unknown: '죄송합니다, 이해하지 못했습니다. 도로 상황에 대해 물어보거나 채팅할 수 있어요!',
                 placeholder: '메시지 입력...',
                 hello: '안녕하세요! 만나서 반갑습니다!',
                 howareyou: '저는 잘 지냅니다, 감사합니다! 당신은요?',
                 goodbye: '안녕히 가세요! 즐거운 여행 되세요!',
-                thanks: '천만에요! 도와드릴 수 있어서 기쁩니다!'
+                thanks: '천만에요! 도와드릴 수 있어서 기쁩니다!',
+                weather: '오늘 날씨가 좋네요! 산책하기 좋아요.',
+                name: '제 이름은 소로입니다, 당신의 스마트 도로 비서입니다!',
+                hobby: '도로 상황 검출하고 당신의 안전을 지키는 게 좋아요!',
+                age: '저는 막 태어난 AI 비서라서 아직 0살이에요!',
+                joke: '왜 운전기사는 길을 잃지 않을까요? GPS가 있으니까요! 하하하...',
+                song: '♪ 모든 길에서 안전이 첫 번째～ ♪',
+                traffic: '현재 도로 상황 양호합니다! 안전 운전하세요!',
+                restaurant: '근처에 맛있는 식당이 많습니다! 추천해 드릴까요?',
+                music: '음악을 들으면 여정이 더 즐거워져요! 어떤 음악을 좋아하세요?',
+                movie: '영화 보기는 좋은 오락이에요! 최근에 어떤 좋은 영화를 봤어요?',
+                news: '오늘 무슨 새로운 일 있었어요? 말씀해 주세요!',
+                food: '먹는 것은 하늘보다 중요해요! 어떤 음식을 좋아하세요?',
+                travel: '여행은 시야를 넓혀줘요! 어디로 여행가고 싶어요?',
+                sports: '스포츠는 건강에 좋아요! 어떤 스포츠를 좋아하세요?',
+                morning: '좋은 아침! 오늘 계획 있으세요?',
+                afternoon: '좋은 오후! 일 잘 되고 있어요?',
+                evening: '좋은 저녁! 오늘 수고하셨어요!',
+                night: '늦었어요, 푹 쉬세요!',
+                joke2: '知道吗？障碍物最怕遇到我，因为我会提前告诉你的！',
+                trafficLight: '전방 신호등 있습니다, 주의하세요!',
+                speed: '현재 속도 정상입니다, 유지하세요!',
+                weatherBad: '날씨가 안 좋네요, 조심해서 운전하세요!',
+                foggy: '전방에 안개 있습니다, 감속하세요!',
+                rain: '비 오고 있어요, 길이 미끄러워요, 조심하세요!',
+                snow: '눈 오고 있어요, 길이 미끄러워요, 조심하세요!',
+                trafficJam: '전방에 정체 있습니다, 조심하세요!',
+                roadWork: '전방에 도로 공사 있습니다, 우회하거나 조심해서 통과하세요!',
+                accident: '전방에 사고 있습니다, 감속해서 조심하세요!',
+                school: '전방에 학교 있습니다, 감속하세요!',
+                hospital: '전방에 병원 있습니다, 구급차 나올 수 있어요, 조심하세요!'
             }
         };
 
@@ -241,8 +360,8 @@
         let obstacles = [];
         const canvas = document.getElementById('detectionCanvas');
         const ctx = canvas.getContext('2d');
-        const character = document.getElementById('character');
-        const speechBubble = document.getElementById('speechBubble');
+        const characterMini = document.getElementById('characterMini');
+        const speechBubbleMini = document.getElementById('speechBubbleMini');
         
         function updateLang(lang) {
             currentLang = lang;
@@ -252,14 +371,14 @@
         }
         
         function showCharacterSpeaking(text) {
-            character.classList.add('speaking', 'waving');
-            speechBubble.textContent = text.length > 20 ? text.substring(0, 20) + '...' : text;
-            speechBubble.classList.remove('hidden');
+            characterMini.classList.add('speaking', 'waving');
+            speechBubbleMini.textContent = text.length > 15 ? text.substring(0, 15) + '...' : text;
+            speechBubbleMini.classList.remove('hidden');
         }
         
         function hideCharacterSpeaking() {
-            character.classList.remove('speaking', 'waving');
-            speechBubble.classList.add('hidden');
+            characterMini.classList.remove('speaking', 'waving');
+            speechBubbleMini.classList.add('hidden');
         }
         
         function speak(text) {
@@ -297,19 +416,72 @@
         
         function handleChat(message) {
             const lowerMsg = message.toLowerCase().trim();
+            const msg = messages[currentLang];
             
-            if (lowerMsg.includes('你好') || lowerMsg.includes('hello') || lowerMsg.includes('こんにちは') || lowerMsg.includes('안녕')) {
-                return messages[currentLang].hello;
-            } else if (lowerMsg.includes('你好吗') || lowerMsg.includes('how are you') || lowerMsg.includes('元気') || lowerMsg.includes('잘 지내')) {
-                return messages[currentLang].howareyou;
-            } else if (lowerMsg.includes('再见') || lowerMsg.includes('goodbye') || lowerMsg.includes('さようなら') || lowerMsg.includes('안녕히')) {
-                return messages[currentLang].goodbye;
-            } else if (lowerMsg.includes('谢谢') || lowerMsg.includes('thank') || lowerMsg.includes('ありがとう') || lowerMsg.includes('감사')) {
-                return messages[currentLang].thanks;
-            } else if (lowerMsg.includes('帮助') || lowerMsg.includes('help') || lowerMsg.includes('ヘルプ') || lowerMsg.includes('도움')) {
-                return messages[currentLang].help;
+            if (lowerMsg.includes('你好') || lowerMsg.includes('hello') || lowerMsg.includes('こんにちは') || lowerMsg.includes('안녕') || lowerMsg.includes('hi')) {
+                return msg.hello;
+            } else if (lowerMsg.includes('好吗') || lowerMsg.includes('how are you') || lowerMsg.includes('元気') || lowerMsg.includes('잘 지내') || lowerMsg.includes('近来') || lowerMsg.includes('最近')) {
+                return msg.howareyou;
+            } else if (lowerMsg.includes('再见') || lowerMsg.includes('goodbye') || lowerMsg.includes('さようなら') || lowerMsg.includes('안녕히') || lowerMsg.includes('bye')) {
+                return msg.goodbye;
+            } else if (lowerMsg.includes('谢谢') || lowerMsg.includes('thank') || lowerMsg.includes('ありがとう') || lowerMsg.includes('감사') || lowerMsg.includes('thx')) {
+                return msg.thanks;
+            } else if (lowerMsg.includes('帮助') || lowerMsg.includes('help') || lowerMsg.includes('ヘルプ') || lowerMsg.includes('도움') || lowerMsg.includes('有什么用') || lowerMsg.includes('能做什么')) {
+                return msg.help;
+            } else if (lowerMsg.includes('天气') || lowerMsg.includes('weather') || lowerMsg.includes('天気') || lowerMsg.includes('날씨')) {
+                return msg.weather;
+            } else if (lowerMsg.includes('名字') || lowerMsg.includes('name') || lowerMsg.includes('名前') || lowerMsg.includes('이름') || lowerMsg.includes('你叫什么')) {
+                return msg.name;
+            } else if (lowerMsg.includes('爱好') || lowerMsg.includes('hobby') || lowerMsg.includes('趣味') || lowerMsg.includes('취미')) {
+                return msg.hobby;
+            } else if (lowerMsg.includes('年龄') || lowerMsg.includes('age') || lowerMsg.includes('年') || lowerMsg.includes('나이') || lowerMsg.includes('几岁')) {
+                return msg.age;
+            } else if (lowerMsg.includes('笑话') || lowerMsg.includes('joke') || lowerMsg.includes('冗談') || lowerMsg.includes('농담') || lowerMsg.includes('讲个笑话')) {
+                return msg.joke;
+            } else if (lowerMsg.includes('唱歌') || lowerMsg.includes('song') || lowerMsg.includes('歌') || lowerMsg.includes('노래') || lowerMsg.includes('唱')) {
+                return msg.song;
+            } else if (lowerMsg.includes('路况') || lowerMsg.includes('traffic') || lowerMsg.includes('交通') || lowerMsg.includes('교통')) {
+                return msg.traffic;
+            } else if (lowerMsg.includes('早上好') || lowerMsg.includes('早安') || lowerMsg.includes('good morning') || lowerMsg.includes('おはよう') || lowerMsg.includes('좋은 아침')) {
+                return msg.morning;
+            } else if (lowerMsg.includes('下午好') || lowerMsg.includes('good afternoon') || lowerMsg.includes('こんにちは') || lowerMsg.includes('좋은 오후')) {
+                return msg.afternoon;
+            } else if (lowerMsg.includes('晚上好') || lowerMsg.includes('good evening') || lowerMsg.includes('こんばんは') || lowerMsg.includes('좋은 저녁')) {
+                return msg.evening;
+            } else if (lowerMsg.includes('晚安') || lowerMsg.includes('good night') || lowerMsg.includes('おやすみ') || lowerMsg.includes('좋은 밤') || lowerMsg.includes('睡觉')) {
+                return msg.night;
+            } else if (lowerMsg.includes('饭店') || lowerMsg.includes('餐厅') || lowerMsg.includes('restaurant') || lowerMsg.includes('食堂') || lowerMsg.includes('식당') || lowerMsg.includes('饿了')) {
+                return msg.restaurant;
+            } else if (lowerMsg.includes('音乐') || lowerMsg.includes('music') || lowerMsg.includes('音楽') || lowerMsg.includes('음악')) {
+                return msg.music;
+            } else if (lowerMsg.includes('电影') || lowerMsg.includes('movie') || lowerMsg.includes('映画') || lowerMsg.includes('영화')) {
+                return msg.movie;
+            } else if (lowerMsg.includes('新闻') || lowerMsg.includes('news') || lowerMsg.includes('ニュース') || lowerMsg.includes('뉴스')) {
+                return msg.news;
+            } else if (lowerMsg.includes('美食') || lowerMsg.includes('food') || lowerMsg.includes('料理') || lowerMsg.includes('음식')) {
+                return msg.food;
+            } else if (lowerMsg.includes('旅行') || lowerMsg.includes('travel') || lowerMsg.includes('旅行') || lowerMsg.includes('여행')) {
+                return msg.travel;
+            } else if (lowerMsg.includes('运动') || lowerMsg.includes('sports') || lowerMsg.includes('スポーツ') || lowerMsg.includes('운동')) {
+                return msg.sports;
+            } else if (lowerMsg.includes('雾') || lowerMsg.includes('fog') || lowerMsg.includes('霧') || lowerMsg.includes('안개')) {
+                return msg.foggy;
+            } else if (lowerMsg.includes('雨') || lowerMsg.includes('rain') || lowerMsg.includes('雨') || lowerMsg.includes('비')) {
+                return msg.rain;
+            } else if (lowerMsg.includes('雪') || lowerMsg.includes('snow') || lowerMsg.includes('雪') || lowerMsg.includes('눈')) {
+                return msg.snow;
+            } else if (lowerMsg.includes('堵车') || lowerMsg.includes('塞车') || lowerMsg.includes('堵') || lowerMsg.includes('jam') || lowerMsg.includes('込') || lowerMsg.includes('정체')) {
+                return msg.trafficJam;
+            } else if (lowerMsg.includes('施工') || lowerMsg.includes('work') || lowerMsg.includes('工事') || lowerMsg.includes('공사')) {
+                return msg.roadWork;
+            } else if (lowerMsg.includes('事故') || lowerMsg.includes('accident') || lowerMsg.includes('事故') || lowerMsg.includes('사고')) {
+                return msg.accident;
+            } else if (lowerMsg.includes('学校') || lowerMsg.includes('school') || lowerMsg.includes('学校') || lowerMsg.includes('학교')) {
+                return msg.school;
+            } else if (lowerMsg.includes('医院') || lowerMsg.includes('hospital') || lowerMsg.includes('病院') || lowerMsg.includes('병원')) {
+                return msg.hospital;
             } else {
-                return messages[currentLang].unknown;
+                return msg.unknown;
             }
         }
         
