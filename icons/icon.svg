@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="80" fill="#000000"/>
+  <!-- 眼睛外圈 -->
+  <ellipse cx="256" cy="210" rx="160" ry="90" fill="none" stroke="#f5c400" stroke-width="20"/>
+  <!-- 瞳孔 -->
+  <circle cx="256" cy="210" r="46" fill="#f5c400"/>
+  <!-- 瞳孔中心 -->
+  <circle cx="256" cy="210" r="23" fill="#000"/>
+  <!-- 高光 -->
+  <circle cx="272" cy="195" r="10" fill="#fff" opacity="0.9"/>
+  <!-- 文字 -->
+  <text x="256" y="400" text-anchor="middle" fill="#fff" font-size="56" font-weight="bold" font-family="Microsoft YaHei, PingFang SC, sans-serif">视障助手</text>
+</svg>
