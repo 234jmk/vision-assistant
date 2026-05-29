@@ -556,6 +556,43 @@
       });
     });
 
+    /* ========== 豆包AI配置 ========== */
+    const DOUBAO_CONFIG = {
+      apiKey: 'ark-1e6921c1-8454-4c83-8f69-c2efa99aa68d-aa7f9',
+      apiUrl: 'https://ark.bytedance.net/api/text/chat'
+    };
+
+    /* ========== 调用豆包AI ========== */
+    async function callDoubaoAI(message) {
+      try {
+        const response = await fetch(DOUBAO_CONFIG.apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DOUBAO_CONFIG.apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'doubao-3.5',
+            messages: [{ role: 'user', content: message }],
+            max_tokens: 200
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data && data.choices && data.choices[0] && data.choices[0].message) {
+          return data.choices[0].message.content;
+        }
+        return null;
+      } catch (error) {
+        console.warn('豆包API调用失败:', error);
+        return null;
+      }
+    }
+
     /* ========== 语音引擎 ========== */
     function pickVoice() {
       if (!('speechSynthesis' in window)) return;
@@ -674,73 +711,61 @@
     }
 
     /* ========== 处理语音输入 ========== */
-    function handleUserVoiceInput(text) {
+    async function handleUserVoiceInput(text) {
       const lowerText = text.toLowerCase();
 
-      /* 问候语 */
-      if (/你好|hello|hi|こんにちは|안녕/.test(lowerText)) {
-        speak(L('greeting'));
+      /* 停止聆听 - 优先处理 */
+      if (/停止|stop|止め|멈춰/.test(lowerText)) {
+        stopListening();
+        speak(L('listen_stop'));
+        return;
       }
-      /* 再见 */
-      else if (/再见|bye|goodbye|さようなら|안녕히/.test(lowerText)) {
-        speak(L('goodbye'));
-      }
-      /* 谢谢 */
-      else if (/谢谢|thanks|ありがとう|감사/.test(lowerText)) {
-        speak(L('thanks'));
-      }
-      /* 笑话 */
-      else if (/笑话|joke|冗談|농담/.test(lowerText)) {
-        speak(L('joke'));
-      }
-      /* 唱歌 */
-      else if (/唱歌|sing|歌|노래/.test(lowerText)) {
-        speak(L('song'));
-      }
-      /* 天气 */
-      else if (/天气|weather|天気|날씨/.test(lowerText)) {
-        speak(L('weather'));
-      }
-      /* 美食 */
-      else if (/吃|food|料理|음식|饿/.test(lowerText)) {
-        speak(L('food'));
-      }
-      /* 旅行 */
-      else if (/旅行|travel|여행/.test(lowerText)) {
-        speak(L('travel'));
-      }
-      /* 名字 */
-      else if (/名字|name|名前|이름|你叫什么/.test(lowerText)) {
-        speak(L('name'));
-      }
-      /* 爱好 */
-      else if (/爱好|hobby|趣味|취미/.test(lowerText)) {
-        speak(L('hobby'));
-      }
-      /* 年龄 */
-      else if (/年龄|age|年|나이|几岁/.test(lowerText)) {
-        speak(L('age'));
-      }
-      /* 帮助 */
-      else if (/帮助|help|有什么用|何ができる|도움/.test(lowerText)) {
-        speak(L('help'));
-      }
+
       /* 重复播报路况 */
-      else if (/路况|traffic|交通/.test(lowerText)) {
+      if (/路况|traffic|交通/.test(lowerText)) {
         if (lastSpeech) {
           speak(lastSpeech);
         } else {
           speak(L('no_obj'));
         }
+        return;
       }
-      /* 停止聆听 */
-      else if (/停止|stop|止め|멈춰/.test(lowerText)) {
-        stopListening();
-        speak(L('listen_stop'));
-      }
-      /* 默认回复 */
-      else {
-        speak(L('chat_unknown'));
+
+      /* 调用豆包AI处理对话 */
+      setStatus('正在思考…', 'loading');
+      const aiResponse = await callDoubaoAI(text);
+
+      if (aiResponse) {
+        speak(aiResponse);
+      } else {
+        /* AI调用失败，使用本地回复 */
+        if (/你好|hello|hi|こんにちは|안녕/.test(lowerText)) {
+          speak(L('greeting'));
+        } else if (/再见|bye|goodbye|さようなら|안녕히/.test(lowerText)) {
+          speak(L('goodbye'));
+        } else if (/谢谢|thanks|ありがとう|감사/.test(lowerText)) {
+          speak(L('thanks'));
+        } else if (/笑话|joke|冗談|농담/.test(lowerText)) {
+          speak(L('joke'));
+        } else if (/唱歌|sing|歌|노래/.test(lowerText)) {
+          speak(L('song'));
+        } else if (/天气|weather|天気|날씨/.test(lowerText)) {
+          speak(L('weather'));
+        } else if (/吃|food|料理|음식|饿/.test(lowerText)) {
+          speak(L('food'));
+        } else if (/旅行|travel|여행/.test(lowerText)) {
+          speak(L('travel'));
+        } else if (/名字|name|名前|이름|你叫什么/.test(lowerText)) {
+          speak(L('name'));
+        } else if (/爱好|hobby|趣味|취미/.test(lowerText)) {
+          speak(L('hobby'));
+        } else if (/年龄|age|年|나이|几岁/.test(lowerText)) {
+          speak(L('age'));
+        } else if (/帮助|help|有什么用|何ができる|도움/.test(lowerText)) {
+          speak(L('help'));
+        } else {
+          speak(L('chat_unknown'));
+        }
       }
     }
 
