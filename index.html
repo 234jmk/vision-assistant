@@ -558,13 +558,14 @@
 
     /* ========== 豆包AI配置 ========== */
     const DOUBAO_CONFIG = {
-      apiKey: 'ark-1e6921c1-8454-4c83-8f69-c2efa99aa68d-aa7f9',
-      apiUrl: 'https://ark.bytedance.net/api/text/chat'
+      apiKey: 'ark-2049d098-5a37-4ec0-8229-2cc47c793acd-b829d',
+      apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
     };
 
     /* ========== 调用豆包AI ========== */
     async function callDoubaoAI(message) {
       try {
+        console.log('正在调用豆包AI...');
         const response = await fetch(DOUBAO_CONFIG.apiUrl, {
           method: 'POST',
           headers: {
@@ -572,17 +573,23 @@
             'Authorization': `Bearer ${DOUBAO_CONFIG.apiKey}`
           },
           body: JSON.stringify({
-            model: 'doubao-3.5',
+            model: 'ep-2026052902836-k6kb5',
             messages: [{ role: 'user', content: message }],
-            max_tokens: 200
+            max_tokens: 256
           })
         });
 
+        console.log('API响应状态:', response.status);
+
         if (!response.ok) {
+          const errorText = await response.text();
+          console.warn('API错误响应:', errorText);
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('API响应数据:', data);
+
         if (data && data.choices && data.choices[0] && data.choices[0].message) {
           return data.choices[0].message.content;
         }
