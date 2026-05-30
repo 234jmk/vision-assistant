@@ -674,26 +674,16 @@
       utt.onend = () => {
         isSpeaking = false;
         setStatus('播报完成', 'ready');
-        /* 播报结束后，等一小会儿再重启识别，避免尾音被识别 */
+        /* 播报结束后，稍等再重启识别，避免把播报尾音识别成输入 */
         if (isListening) {
-          setTimeout(() => {
-            if (isListening && !isSpeaking) {
-              recognition = initSpeechRecognition();
-              try { recognition.start(); } catch(e) {}
-            }
-          }, 600);
+          setTimeout(startListeningNow, 600);
         }
       };
       utt.onerror = () => {
         isSpeaking = false;
         setStatus('播报完成', 'ready');
         if (isListening) {
-          setTimeout(() => {
-            if (isListening && !isSpeaking) {
-              recognition = initSpeechRecognition();
-              try { recognition.start(); } catch(e) {}
-            }
-          }, 600);
+          setTimeout(startListeningNow, 600);
         }
       };
       window.speechSynthesis.speak(utt);
@@ -726,12 +716,7 @@
         voiceCommandBadge.classList.remove('listening');
         /* 如果还在聆听模式且当前没在播报，则重新启动识别 */
         if (isListening && !isSpeaking) {
-          setTimeout(() => {
-            if (isListening && !isSpeaking) {
-              recognition = initSpeechRecognition();
-              try { recognition.start(); } catch(e) {}
-            }
-          }, 400);
+          setTimeout(startListeningNow, 400);
         }
       };
 
@@ -749,12 +734,7 @@
 
         /* no-speech / aborted / audio-capture 等，继续重试 */
         if (isListening && !isSpeaking) {
-          setTimeout(() => {
-            if (isListening && !isSpeaking) {
-              recognition = initSpeechRecognition();
-              try { recognition.start(); } catch(e) {}
-            }
-          }, 400);
+          setTimeout(startListeningNow, 400);
         }
       };
 
@@ -771,27 +751,32 @@
     }
 
     /* ========== 聆听控制 ========== */
+    function startListeningNow() {
+      /* 真正启动识别器，只在这里调 recognition.start() */
+      if (!isListening) return;          // 已被停止则放弃
+      if (isSpeaking) return;            // 正在播报则放弃（speak.onend 会重启）
+
+      recognition = initSpeechRecognition();
+      if (!recognition) return;
+
+      try { recognition.start(); }
+      catch(e) { console.warn('recognition.start() 失败:', e); }
+    }
+
     function startListening() {
+      /* 检查浏览器支持 */
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        speak('抱歉，您的浏览器不支持语音识别功能');
+        return;
+      }
+
       isListening = true;
       btnListen.classList.add('active');
       btnListen.textContent = '🎤 停止对话';
 
-      /* 每次开始都重新创建识别器（避免复用状态残留） */
-      recognition = initSpeechRecognition();
-      if (!recognition) {
-        speak('抱歉，您的浏览器不支持语音识别功能');
-        isListening = false;
-        btnListen.classList.remove('active');
-        btnListen.textContent = '🎤 开始对话';
-        return;
-      }
-
-      try {
-        recognition.start();
-      } catch(e) {
-        console.warn('语音识别启动失败:', e);
-      }
-
+      /* ① 先播报提示语（speak 内部会 abort 任何识别），
+            播报结束后 speak.onend 会自动调 startListeningNow() */
       speak(L('listen_start'));
     }
 
@@ -801,9 +786,11 @@
       btnListen.textContent = '🎤 开始对话';
 
       voiceCommandBadge.classList.remove('listening');
+      voiceCommandBadge.textContent = '🎤 在听你说…';
 
       if (recognition) {
         try { recognition.stop(); } catch(e) {}
+        recognition = null;
       }
     }
 
@@ -965,14 +952,11 @@
       setStatus('正在检测中…', 'ready');
       startAutoDetect();
 
-      /* 初始化语音识别 */
-      recognition = initSpeechRecognition();
-
       /* 显示语言选择提示 */
       curLangBadge.textContent = LANG_NAMES[currentLang];
       curLangBadge.style.display = 'block';
 
-      /* 语音打招呼 */
+      /* 语音打招呼（开始检测后再播报，避免覆盖） */
       setTimeout(() => {
         speak(L('opening'));
       }, 300);
