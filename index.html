@@ -510,6 +510,7 @@
     let isDetecting = false;
     let ttsVoice = null;
     let isListening = false;
+    let isSpeaking = false;
     let recognition = null;
 
     /* DOM */
@@ -556,47 +557,78 @@
       });
     });
 
-    /* ========== 豆包AI配置 ========== */
+    /* ========== 豆包AI配置（保留供将来使用） ========== */
     const DOUBAO_CONFIG = {
       apiKey: 'ark-2049d098-5a37-4ec0-8229-2cc47c793acd-b829d',
       apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
     };
 
-    /* ========== 调用豆包AI ========== */
-    async function callDoubaoAI(message) {
-      try {
-        console.log('正在调用豆包AI...');
-        const response = await fetch(DOUBAO_CONFIG.apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${DOUBAO_CONFIG.apiKey}`
-          },
-          body: JSON.stringify({
-            model: 'ep-2026052902836-k6kb5',
-            messages: [{ role: 'user', content: message }],
-            max_tokens: 256
-          })
-        });
+    /* ========== 处理语音输入（本地关键词匹配） ========== */
+    function handleUserVoiceInput(text) {
+      const t = text.toLowerCase();
 
-        console.log('API响应状态:', response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.warn('API错误响应:', errorText);
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('API响应数据:', data);
-
-        if (data && data.choices && data.choices[0] && data.choices[0].message) {
-          return data.choices[0].message.content;
-        }
-        return null;
-      } catch (error) {
-        console.warn('豆包API调用失败:', error);
-        return null;
+      /* 停止聆听 - 优先处理 */
+      if (/停止|stop|止め|멈춰/.test(t)) {
+        stopListening();
+        speak(L('listen_stop'));
+        return;
+      }
+      /* 重复播报路况 */
+      if (/路况|traffic|交通|前方|障碍/.test(t)) {
+        speak(lastSpeech || L('no_obj'));
+        return;
+      }
+      /* 你好 */
+      if (/你好|hello|hi|こんにちは|안녕/.test(t)) {
+        speak(L('greeting'));
+      }
+      /* 再见 */
+      else if (/再见|bye|goodbye|さようなら|안녕히/.test(t)) {
+        speak(L('goodbye'));
+      }
+      /* 谢谢 */
+      else if (/谢谢|谢|thanks|ありがとう|감사/.test(t)) {
+        speak(L('thanks'));
+      }
+      /* 笑话 */
+      else if (/笑话|笑一个|joke|冗談|농담/.test(t)) {
+        speak(L('joke'));
+      }
+      /* 唱歌 */
+      else if (/唱歌|唱|sing|歌|노래/.test(t)) {
+        speak(L('song'));
+      }
+      /* 天气 */
+      else if (/天气|weather|天気|날씨/.test(t)) {
+        speak(L('weather'));
+      }
+      /* 美食/吃 */
+      else if (/吃|食物|美食|food|料理|음식|饿/.test(t)) {
+        speak(L('food'));
+      }
+      /* 旅行 */
+      else if (/旅行|旅游|travel|여행/.test(t)) {
+        speak(L('travel'));
+      }
+      /* 名字 */
+      else if (/名字|你叫|你是谁|name|名前|이름/.test(t)) {
+        speak(L('name'));
+      }
+      /* 爱好 */
+      else if (/爱好|喜欢什么|hobby|趣味|취미/.test(t)) {
+        speak(L('hobby'));
+      }
+      /* 年龄 */
+      else if (/年龄|几岁|多大|age|年|나이/.test(t)) {
+        speak(L('age'));
+      }
+      /* 帮助 */
+      else if (/帮助|能做什么|怎么用|help|何ができる|도움/.test(t)) {
+        speak(L('help'));
+      }
+      /* 默认回复 */
+      else {
+        speak(L('chat_unknown'));
       }
     }
 
@@ -623,7 +655,14 @@
       if (!('speechSynthesis' in window)) return;
       announce(text);
 
+      /* 先停止识别，避免把自己的声音识别成输入 */
+      if (recognition) {
+        try { recognition.abort(); } catch(e) {}
+      }
+
       window.speechSynthesis.cancel();
+      isSpeaking = true;
+
       const utt = new SpeechSynthesisUtterance(text);
       utt.lang = L('voice_lang');
       utt.rate = 1.0;
@@ -633,16 +672,28 @@
 
       utt.onstart = () => setStatus('正在播报…', 'speaking');
       utt.onend = () => {
+        isSpeaking = false;
         setStatus('播报完成', 'ready');
-        /* 播报完成后继续聆听 */
-        if (isListening && recognition) {
-          try { recognition.start(); } catch(e) {}
+        /* 播报结束后，等一小会儿再重启识别，避免尾音被识别 */
+        if (isListening) {
+          setTimeout(() => {
+            if (isListening && !isSpeaking) {
+              recognition = initSpeechRecognition();
+              try { recognition.start(); } catch(e) {}
+            }
+          }, 600);
         }
       };
       utt.onerror = () => {
+        isSpeaking = false;
         setStatus('播报完成', 'ready');
-        if (isListening && recognition) {
-          try { recognition.start(); } catch(e) {}
+        if (isListening) {
+          setTimeout(() => {
+            if (isListening && !isSpeaking) {
+              recognition = initSpeechRecognition();
+              try { recognition.start(); } catch(e) {}
+            }
+          }, 600);
         }
       };
       window.speechSynthesis.speak(utt);
@@ -657,7 +708,7 @@
       }
 
       const rec = new SpeechRecognition();
-      rec.continuous = false;
+      rec.continuous = false;      /* 每次识别一句话，识别完自动停止 */
       rec.interimResults = false;
       rec.maxAlternatives = 1;
 
@@ -666,23 +717,21 @@
       rec.lang = langMap[currentLang] || 'zh-CN';
 
       rec.onstart = () => {
-        console.log('语音识别开始');
-        setStatus('正在聆听…', 'listening');
-        voiceCommandBadge.textContent = L('listen_start');
+        setStatus('👂 正在聆听，请说话…', 'listening');
+        voiceCommandBadge.textContent = '🎤 我在听…';
         voiceCommandBadge.classList.add('listening');
       };
 
       rec.onend = () => {
-        console.log('语音识别结束');
         voiceCommandBadge.classList.remove('listening');
-
-        /* 如果还在聆听模式，自动重启 */
-        if (isListening) {
+        /* 如果还在聆听模式且当前没在播报，则重新启动识别 */
+        if (isListening && !isSpeaking) {
           setTimeout(() => {
-            if (isListening && recognition) {
+            if (isListening && !isSpeaking) {
+              recognition = initSpeechRecognition();
               try { recognition.start(); } catch(e) {}
             }
-          }, 500);
+          }, 400);
         }
       };
 
@@ -690,26 +739,30 @@
         console.warn('语音识别错误:', event.error);
         voiceCommandBadge.classList.remove('listening');
 
-        if (event.error === 'no-speech') {
-          /* 没听到声音，继续聆听 */
-          if (isListening) {
-            setTimeout(() => {
-              if (isListening && recognition) {
-                try { recognition.start(); } catch(e) {}
-              }
-            }, 300);
-          }
-        } else if (event.error === 'not-allowed') {
-          setStatus('语音权限被拒绝', 'error');
+        if (event.error === 'not-allowed') {
+          setStatus('麦克风权限被拒绝，请在浏览器设置中允许', 'error');
+          isListening = false;
+          btnListen.classList.remove('active');
+          btnListen.textContent = '🎤 开始对话';
+          return;
+        }
+
+        /* no-speech / aborted / audio-capture 等，继续重试 */
+        if (isListening && !isSpeaking) {
+          setTimeout(() => {
+            if (isListening && !isSpeaking) {
+              recognition = initSpeechRecognition();
+              try { recognition.start(); } catch(e) {}
+            }
+          }, 400);
         }
       };
 
       rec.onresult = (event) => {
         const transcript = event.results[0][0].transcript.trim();
         console.log('识别到:', transcript);
-
+        voiceCommandBadge.textContent = `💬 "${transcript}"`;
         if (transcript) {
-          /* 处理用户输入 */
           handleUserVoiceInput(transcript);
         }
       };
@@ -717,79 +770,21 @@
       return rec;
     }
 
-    /* ========== 处理语音输入 ========== */
-    async function handleUserVoiceInput(text) {
-      const lowerText = text.toLowerCase();
-
-      /* 停止聆听 - 优先处理 */
-      if (/停止|stop|止め|멈춰/.test(lowerText)) {
-        stopListening();
-        speak(L('listen_stop'));
-        return;
-      }
-
-      /* 重复播报路况 */
-      if (/路况|traffic|交通/.test(lowerText)) {
-        if (lastSpeech) {
-          speak(lastSpeech);
-        } else {
-          speak(L('no_obj'));
-        }
-        return;
-      }
-
-      /* 调用豆包AI处理对话 */
-      setStatus('正在思考…', 'loading');
-      const aiResponse = await callDoubaoAI(text);
-
-      if (aiResponse) {
-        speak(aiResponse);
-      } else {
-        /* AI调用失败，使用本地回复 */
-        if (/你好|hello|hi|こんにちは|안녕/.test(lowerText)) {
-          speak(L('greeting'));
-        } else if (/再见|bye|goodbye|さようなら|안녕히/.test(lowerText)) {
-          speak(L('goodbye'));
-        } else if (/谢谢|thanks|ありがとう|감사/.test(lowerText)) {
-          speak(L('thanks'));
-        } else if (/笑话|joke|冗談|농담/.test(lowerText)) {
-          speak(L('joke'));
-        } else if (/唱歌|sing|歌|노래/.test(lowerText)) {
-          speak(L('song'));
-        } else if (/天气|weather|天気|날씨/.test(lowerText)) {
-          speak(L('weather'));
-        } else if (/吃|food|料理|음식|饿/.test(lowerText)) {
-          speak(L('food'));
-        } else if (/旅行|travel|여행/.test(lowerText)) {
-          speak(L('travel'));
-        } else if (/名字|name|名前|이름|你叫什么/.test(lowerText)) {
-          speak(L('name'));
-        } else if (/爱好|hobby|趣味|취미/.test(lowerText)) {
-          speak(L('hobby'));
-        } else if (/年龄|age|年|나이|几岁/.test(lowerText)) {
-          speak(L('age'));
-        } else if (/帮助|help|有什么用|何ができる|도움/.test(lowerText)) {
-          speak(L('help'));
-        } else {
-          speak(L('chat_unknown'));
-        }
-      }
-    }
-
     /* ========== 聆听控制 ========== */
     function startListening() {
-      if (!recognition) {
-        recognition = initSpeechRecognition();
-      }
-
-      if (!recognition) {
-        speak('抱歉，您的浏览器不支持语音识别功能');
-        return;
-      }
-
       isListening = true;
       btnListen.classList.add('active');
       btnListen.textContent = '🎤 停止对话';
+
+      /* 每次开始都重新创建识别器（避免复用状态残留） */
+      recognition = initSpeechRecognition();
+      if (!recognition) {
+        speak('抱歉，您的浏览器不支持语音识别功能');
+        isListening = false;
+        btnListen.classList.remove('active');
+        btnListen.textContent = '🎤 开始对话';
+        return;
+      }
 
       try {
         recognition.start();
