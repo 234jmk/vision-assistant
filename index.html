@@ -261,6 +261,136 @@
       background: var(--accent); color: #000;
       border-color: var(--accent); font-weight: 700;
     }
+
+    /* ===== 聊天面板 ===== */
+    #chat-panel {
+      position: fixed; bottom: 140px; right: 10px;
+      width: 280px; max-height: 300px;
+      background: rgba(10,10,10,0.92);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+    #chat-panel.visible {
+      display: flex;
+    }
+    #chat-header {
+      padding: 8px 12px;
+      background: rgba(245,196,0,0.15);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #chat-header h3 {
+      color: var(--accent);
+      font-size: 0.85rem;
+      margin: 0;
+      flex: 1;
+    }
+    #chat-close {
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chat-message {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+    .chat-message.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #000;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-message.assistant {
+      align-self: flex-start;
+      background: rgba(64,196,255,0.2);
+      color: #fff;
+      border: 1px solid rgba(64,196,255,0.3);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* ===== 小人角色 ===== */
+    #assistant-avatar {
+      position: fixed; bottom: 150px; right: 10px;
+      width: 60px; height: 60px;
+      z-index: 11;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    #assistant-avatar:active {
+      transform: scale(0.95);
+    }
+    #assistant-avatar svg {
+      width: 100%;
+      height: 100%;
+    }
+    #assistant-avatar .avatar-body {
+      fill: var(--accent);
+    }
+    #assistant-avatar .avatar-face {
+      fill: #000;
+    }
+    #assistant-avatar.listening .wave {
+      animation: wavePulse 0.6s ease-in-out infinite;
+    }
+    #assistant-avatar.speaking .wave {
+      animation: wavePulse 0.3s ease-in-out infinite;
+    }
+    @keyframes wavePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.1); }
+    }
+
+    /* 语音波动效果 */
+    .voice-waves {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      gap: 4px;
+    }
+    .voice-waves.visible {
+      display: flex;
+    }
+    .voice-waves .wave {
+      width: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: waveAnimate 0.5s ease-in-out infinite alternate;
+    }
+    .voice-waves .wave:nth-child(1) { animation-delay: 0s; height: 12px; }
+    .voice-waves .wave:nth-child(2) { animation-delay: 0.1s; height: 18px; }
+    .voice-waves .wave:nth-child(3) { animation-delay: 0.2s; height: 14px; }
+    .voice-waves .wave:nth-child(4) { animation-delay: 0.15s; height: 16px; }
+    @keyframes waveAnimate {
+      from { transform: scaleY(0.5); }
+      to { transform: scaleY(1); }
+    }
   </style>
 </head>
 
@@ -305,6 +435,41 @@
   <div id="detecting-badge">🔍 检测中…</div>
   <div id="cur-lang-badge">CN 中文播报</div>
   <div id="voice-command-badge">🎤 在听你说…</div>
+
+  <!-- 小人角色 -->
+  <div id="assistant-avatar" aria-label="智能助手" role="button" tabindex="0">
+    <div class="voice-waves">
+      <div class="wave"></div>
+      <div class="wave"></div>
+      <div class="wave"></div>
+      <div class="wave"></div>
+    </div>
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- 身体 -->
+      <circle class="avatar-body" cx="50" cy="60" r="35" />
+      <!-- 头 -->
+      <circle class="avatar-body" cx="50" cy="30" r="22" />
+      <!-- 眼睛 -->
+      <circle class="avatar-face" cx="42" cy="28" r="4" />
+      <circle class="avatar-face" cx="58" cy="28" r="4" />
+      <!-- 嘴巴 - 微笑 -->
+      <path class="avatar-face" d="M 40 35 Q 50 45 60 35" stroke="currentColor" stroke-width="3" fill="none" />
+      <!-- 手臂 -->
+      <ellipse class="avatar-body" cx="18" cy="60" rx="8" ry="15" />
+      <ellipse class="avatar-body" cx="82" cy="60" rx="8" ry="15" />
+    </svg>
+  </div>
+
+  <!-- 聊天面板 -->
+  <div id="chat-panel" aria-label="聊天面板" role="dialog">
+    <div id="chat-header">
+      <h3>💬 智能助手</h3>
+      <button id="chat-close" aria-label="关闭聊天面板">×</button>
+    </div>
+    <div id="chat-messages" aria-live="polite">
+      <!-- 消息会动态添加到这里 -->
+    </div>
+  </div>
 
   <!-- 底部面板 -->
   <div id="bottom-panel">
@@ -486,6 +651,40 @@
     function L(key) {
       return (LABELS[currentLang] && LABELS[currentLang][key]) || (LABELS['zh'][key]) || key;
     }
+    /* ========== 聊天面板功能 ========== */
+    function addChatMessage(text, isUser) {
+      const msgEl = document.createElement('div');
+      msgEl.className = 'chat-message ' + (isUser ? 'user' : 'assistant');
+      msgEl.textContent = text;
+      chatMessages.appendChild(msgEl);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function toggleChatPanel() {
+      chatPanel.classList.toggle('visible');
+      if (chatPanel.classList.contains('visible')) {
+        // 如果面板显示且没有消息，添加欢迎消息
+        if (chatMessages.children.length === 0) {
+          addChatMessage(L('chat_greet'), false);
+        }
+      }
+    }
+
+    /* ========== 小人角色状态动画 ========== */
+    function setAvatarState(state) {
+      // 移除所有状态
+      assistantAvatar.classList.remove('listening', 'speaking');
+      voiceWaves.classList.remove('visible');
+      
+      if (state === 'listening') {
+        assistantAvatar.classList.add('listening');
+        voiceWaves.classList.add('visible');
+      } else if (state === 'speaking') {
+        assistantAvatar.classList.add('speaking');
+        voiceWaves.classList.add('visible');
+      }
+    }
+
     function toLabel(cls) {
       const key = cls.toLowerCase();
       return (LABELS[currentLang] && LABELS[currentLang][key]) || (LABELS['zh'][key]) || cls;
@@ -532,6 +731,11 @@
     const voiceCommandBadge  = document.getElementById('voice-command-badge');
     const startOverlay       = document.getElementById('start-overlay');
     const startBtn           = document.getElementById('start-btn');
+    const chatPanel          = document.getElementById('chat-panel');
+    const chatMessages       = document.getElementById('chat-messages');
+    const chatClose          = document.getElementById('chat-close');
+    const assistantAvatar    = document.getElementById('assistant-avatar');
+    const voiceWaves         = assistantAvatar.querySelector('.voice-waves');
 
     function setStatus(msg, mode) {
       statusText.textContent = msg;
@@ -566,70 +770,86 @@
     /* ========== 处理语音输入（本地关键词匹配） ========== */
     function handleUserVoiceInput(text) {
       const t = text.toLowerCase();
+      
+      // 添加用户消息到聊天面板
+      addChatMessage(text, true);
+      
+      // 显示聊天面板
+      if (!chatPanel.classList.contains('visible')) {
+        chatPanel.classList.add('visible');
+      }
+
+      let response = '';
 
       /* 停止聆听 - 优先处理 */
       if (/停止|stop|止め|멈춰/.test(t)) {
         stopListening();
-        speak(L('listen_stop'));
+        response = L('listen_stop');
+        speak(response);
         return;
       }
       /* 重复播报路况 */
       if (/路况|traffic|交通|前方|障碍/.test(t)) {
-        speak(lastSpeech || L('no_obj'));
+        response = lastSpeech || L('no_obj');
+        speak(response);
         return;
       }
       /* 你好 */
       if (/你好|hello|hi|こんにちは|안녕/.test(t)) {
-        speak(L('greeting'));
+        response = L('greeting');
       }
       /* 再见 */
       else if (/再见|bye|goodbye|さようなら|안녕히/.test(t)) {
-        speak(L('goodbye'));
+        response = L('goodbye');
       }
       /* 谢谢 */
       else if (/谢谢|谢|thanks|ありがとう|감사/.test(t)) {
-        speak(L('thanks'));
+        response = L('thanks');
       }
       /* 笑话 */
       else if (/笑话|笑一个|joke|冗談|농담/.test(t)) {
-        speak(L('joke'));
+        response = L('joke');
       }
       /* 唱歌 */
       else if (/唱歌|唱|sing|歌|노래/.test(t)) {
-        speak(L('song'));
+        response = L('song');
       }
       /* 天气 */
       else if (/天气|weather|天気|날씨/.test(t)) {
-        speak(L('weather'));
+        response = L('weather');
       }
       /* 美食/吃 */
       else if (/吃|食物|美食|food|料理|음식|饿/.test(t)) {
-        speak(L('food'));
+        response = L('food');
       }
       /* 旅行 */
       else if (/旅行|旅游|travel|여행/.test(t)) {
-        speak(L('travel'));
+        response = L('travel');
       }
       /* 名字 */
       else if (/名字|你叫|你是谁|name|名前|이름/.test(t)) {
-        speak(L('name'));
+        response = L('name');
       }
       /* 爱好 */
       else if (/爱好|喜欢什么|hobby|趣味|취미/.test(t)) {
-        speak(L('hobby'));
+        response = L('hobby');
       }
       /* 年龄 */
       else if (/年龄|几岁|多大|age|年|나이/.test(t)) {
-        speak(L('age'));
+        response = L('age');
       }
       /* 帮助 */
       else if (/帮助|能做什么|怎么用|help|何ができる|도움/.test(t)) {
-        speak(L('help'));
+        response = L('help');
       }
       /* 默认回复 */
       else {
-        speak(L('chat_unknown'));
+        response = L('chat_unknown');
       }
+      
+      // 添加助手回复到聊天面板并播报
+      addChatMessage(response, false);
+      speak(response);
     }
 
     /* ========== 语音引擎 ========== */
@@ -670,10 +890,14 @@
       utt.volume = 1.0;
       if (ttsVoice) utt.voice = ttsVoice;
 
-      utt.onstart = () => setStatus('正在播报…', 'speaking');
+      utt.onstart = () => {
+        setStatus('正在播报…', 'speaking');
+        setAvatarState('speaking');
+      };
       utt.onend = () => {
         isSpeaking = false;
         setStatus('播报完成', 'ready');
+        setAvatarState('idle');
         /* 播报结束后，稍等再重启识别，避免把播报尾音识别成输入 */
         if (isListening) {
           setTimeout(startListeningNow, 600);
@@ -682,6 +906,7 @@
       utt.onerror = () => {
         isSpeaking = false;
         setStatus('播报完成', 'ready');
+        setAvatarState('idle');
         if (isListening) {
           setTimeout(startListeningNow, 600);
         }
@@ -710,10 +935,14 @@
         setStatus('👂 正在聆听，请说话…', 'listening');
         voiceCommandBadge.textContent = '🎤 我在听…';
         voiceCommandBadge.classList.add('listening');
+        setAvatarState('listening');
       };
 
       rec.onend = () => {
         voiceCommandBadge.classList.remove('listening');
+        if (!isSpeaking) {
+          setAvatarState('idle');
+        }
         /* 如果还在聆听模式且当前没在播报，则重新启动识别 */
         if (isListening && !isSpeaking) {
           setTimeout(startListeningNow, 400);
@@ -723,6 +952,7 @@
       rec.onerror = (event) => {
         console.warn('语音识别错误:', event.error);
         voiceCommandBadge.classList.remove('listening');
+        setAvatarState('idle');
 
         if (event.error === 'not-allowed') {
           setStatus('麦克风权限被拒绝，请在浏览器设置中允许', 'error');
@@ -787,6 +1017,7 @@
 
       voiceCommandBadge.classList.remove('listening');
       voiceCommandBadge.textContent = '🎤 在听你说…';
+      setAvatarState('idle');
 
       if (recognition) {
         try { recognition.stop(); } catch(e) {}
@@ -920,6 +1151,29 @@
     });
 
     btnListen.addEventListener('click', toggleListening);
+
+    // 小人角色点击事件
+    assistantAvatar.addEventListener('click', () => {
+      if (!isListening) {
+        toggleChatPanel();
+      } else {
+        // 如果正在聆听，点击可以停止
+        toggleListening();
+      }
+    });
+
+    // 键盘支持
+    assistantAvatar.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        assistantAvatar.click();
+      }
+    });
+
+    // 关闭聊天面板
+    chatClose.addEventListener('click', () => {
+      chatPanel.classList.remove('visible');
+    });
 
     /* ========== 音频解锁（必须通过用户手势调用） ========== */
     function unlockAudio() {
